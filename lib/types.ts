@@ -42,6 +42,8 @@ export interface QuizQuestion {
   word: VocabWord;
   options: string[];
   correctIndex: number;
+  storyQuestion?: string;
+  explanation?: string;
 }
 
 export type GameAction =

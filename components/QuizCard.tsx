@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { QuizQuestion } from "@/lib/types";
 
 interface QuizCardProps {
@@ -8,6 +8,7 @@ interface QuizCardProps {
   questionNumber: number;
   totalQuestions: number;
   onAnswer: (selectedIndex: number) => void;
+  ttsSrc?: string;
 }
 
 export default function QuizCard({
@@ -15,14 +16,18 @@ export default function QuizCard({
   questionNumber,
   totalQuestions,
   onAnswer,
+  ttsSrc,
 }: QuizCardProps) {
   const [selected, setSelected] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
+  const [showExplanation, setShowExplanation] = useState(false);
+  const wordAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     setSelected(null);
     setFeedback(null);
-  }, [question.word.id]);
+    setShowExplanation(false);
+  }, [question.word.id, questionNumber]);
 
   const handleSelect = (index: number) => {
     if (selected !== null) return;
@@ -31,32 +36,61 @@ export default function QuizCard({
     const isCorrect = index === question.correctIndex;
     setFeedback(isCorrect ? "correct" : "wrong");
 
-    setTimeout(() => {
-      onAnswer(index);
-    }, isCorrect ? 600 : 800);
+    if (isCorrect) {
+      setShowExplanation(true);
+      setTimeout(() => onAnswer(index), 2500);
+    } else {
+      setTimeout(() => {
+        setSelected(null);
+        setFeedback(null);
+        onAnswer(index);
+      }, 1000);
+    }
   };
 
+  const playWordAudio = () => {
+    if (ttsSrc && wordAudioRef.current) {
+      wordAudioRef.current.currentTime = 0;
+      wordAudioRef.current.play().catch(() => {});
+    }
+  };
+
+  const isStoryQuestion = !!question.storyQuestion;
+
   return (
-    <div className="scene-enter">
-      <div className="text-center mb-6">
-        <p className="text-sm text-neutral-400 mb-2">
-          Match the word · {questionNumber}/{totalQuestions}
+    <div className="scene-enter px-4">
+      {ttsSrc && <audio ref={wordAudioRef} src={ttsSrc} preload="metadata" />}
+
+      {/* Question header */}
+      <div className="text-center mb-4">
+        <p className="text-xs text-neutral-500 mb-1">
+          Question {questionNumber} of {totalQuestions}
         </p>
       </div>
 
-      <div
-        className="mx-auto mb-8 p-6 rounded-xl border-2 border-amber bg-surface text-center max-w-[280px]"
-        style={{ boxShadow: "0 0 20px var(--color-amber-glow)" }}
-      >
-        <p className="text-2xl font-bold text-amber glow-pulse font-display">
-          {question.word.word}
-        </p>
-      </div>
+      {/* Story-based question */}
+      {isStoryQuestion ? (
+        <div className="bg-surface border border-border rounded-xl p-4 mb-5">
+          <p className="text-base leading-relaxed text-white font-display">
+            {question.storyQuestion}
+          </p>
+        </div>
+      ) : (
+        <div
+          className="mx-auto mb-6 p-5 rounded-xl border-2 border-amber bg-surface text-center max-w-[280px]"
+          style={{ boxShadow: "0 0 20px var(--color-amber-glow)" }}
+        >
+          <p className="text-2xl font-bold text-amber glow-pulse font-display">
+            {question.word.word}
+          </p>
+        </div>
+      )}
 
-      <div className="space-y-2 px-4">
+      {/* Answer options */}
+      <div className="space-y-2">
         {question.options.map((option, i) => {
           let className =
-            "w-full text-left px-4 py-3 rounded-lg border transition-all min-h-[48px] text-base font-medium ";
+            "w-full text-left px-4 py-3 rounded-lg border transition-all min-h-[48px] text-sm font-medium ";
 
           if (selected === i) {
             className += feedback === "correct"
@@ -80,6 +114,31 @@ export default function QuizCard({
           );
         })}
       </div>
+
+      {/* Explanation + audio replay on correct answer */}
+      {showExplanation && question.explanation && (
+        <div className="mt-4 scene-enter">
+          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
+            <p className="text-sm text-green-400 leading-relaxed mb-3">
+              {question.explanation}
+            </p>
+            <div className="flex items-center gap-3">
+              <span className="text-amber font-bold font-display text-lg">
+                {question.word.word}
+              </span>
+              <span className="text-neutral-400 text-sm">= {question.word.translation}</span>
+              {ttsSrc && (
+                <button
+                  onClick={playWordAudio}
+                  className="ml-auto px-3 py-1.5 bg-amber/10 border border-amber/30 rounded-lg text-amber text-xs font-semibold hover:bg-amber/20 transition-colors"
+                >
+                  Listen
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

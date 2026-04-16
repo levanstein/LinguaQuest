@@ -7,6 +7,7 @@ import DialogueBubble from "@/components/DialogueBubble";
 import QuizCard from "@/components/QuizCard";
 import VocabSummary from "@/components/VocabSummary";
 import SceneIllustration from "@/components/SceneIllustration";
+import MysteryReveal from "@/components/MysteryReveal";
 import {
   createInitialState,
   gameReducer,
@@ -14,10 +15,13 @@ import {
   isDialogueScene,
   isFinale,
   isQuizComplete,
+  generateQuizFromStory,
   generateQuiz,
 } from "@/lib/game-engine";
 import { SCENE_CONFIGS, type VocabWord, type DialogueData } from "@/lib/types";
-import { getVocabForScene, getDialogueForScene } from "@/lib/fallback-data";
+import { getVocabForScene, getDialogueForScene, getStoryForScene, type SceneStory } from "@/lib/fallback-data";
+
+type Phase = "dialogue" | "quiz" | "mystery" | "transition";
 
 export default function PlayPage() {
   const [state, dispatch] = useReducer(gameReducer, undefined, createInitialState);
@@ -25,6 +29,8 @@ export default function PlayPage() {
   const [overlay, setOverlay] = useState<"well-done" | null>(null);
   const [dialogue, setDialogue] = useState<DialogueData | null>(null);
   const [sceneVocab, setSceneVocab] = useState<VocabWord[]>([]);
+  const [currentStory, setCurrentStory] = useState<SceneStory | null>(null);
+  const [phase, setPhase] = useState<Phase>("dialogue");
   const quizGenerated = useRef(false);
   const transitionTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -35,12 +41,16 @@ export default function PlayPage() {
     return () => { transitionTimers.current.forEach(clearTimeout); };
   }, []);
 
-  // Fetch dialogue and vocab for dialogue scenes
+  // Fetch dialogue, vocab, and story for dialogue scenes
   useEffect(() => {
     if (!isDialogueScene(scene)) return;
 
     const controller = new AbortController();
     const sceneNum = config?.sceneNumber || 2;
+
+    // Load story data
+    const story = getStoryForScene(sceneNum);
+    setCurrentStory(story || null);
 
     Promise.all([
       fetch(`/api/dialogue?scene=${sceneNum}`, { signal: controller.signal })
@@ -58,20 +68,29 @@ export default function PlayPage() {
         setSceneVocab(getVocabForScene(sceneNum));
       });
 
+    setPhase("dialogue");
     return () => controller.abort();
   }, [scene, config?.sceneNumber]);
 
-  // Generate quiz when entering quiz scene — uses vocab from previous dialogue
+  // Generate quiz when entering quiz scene
   useEffect(() => {
-    if (isQuizScene(scene) && !quizGenerated.current && sceneVocab.length > 0) {
+    if (isQuizScene(scene) && !quizGenerated.current) {
       quizGenerated.current = true;
-      const quiz = generateQuiz(sceneVocab, state.learnedWords);
-      dispatch({ type: "SET_QUIZ", quiz });
+      setPhase("quiz");
+
+      // Use story-based quiz if available, otherwise fallback
+      if (currentStory?.quizQuestions) {
+        const quiz = generateQuizFromStory(currentStory.quizQuestions);
+        dispatch({ type: "SET_QUIZ", quiz });
+      } else if (sceneVocab.length > 0) {
+        const quiz = generateQuiz(sceneVocab, state.learnedWords);
+        dispatch({ type: "SET_QUIZ", quiz });
+      }
     }
     if (!isQuizScene(scene)) {
       quizGenerated.current = false;
     }
-  }, [scene, sceneVocab, state.learnedWords]);
+  }, [scene, sceneVocab, state.learnedWords, currentStory]);
 
   const scheduleTimer = useCallback((fn: () => void, ms: number) => {
     const id = setTimeout(fn, ms);
@@ -79,8 +98,6 @@ export default function PlayPage() {
     return id;
   }, []);
 
-  // BUG FIX: Don't clear sceneVocab on transition. Quiz needs it.
-  // Only clear dialogue (new dialogue scenes will fetch fresh data anyway).
   const handleTransition = useCallback(() => {
     setTransitioning(true);
     scheduleTimer(() => {
@@ -94,23 +111,32 @@ export default function PlayPage() {
     dispatch({ type: "ANSWER_QUIZ", selectedIndex });
   }, []);
 
-  // Check if quiz is complete
+  // Check if quiz is complete, show mystery before advancing
   useEffect(() => {
     if (!isQuizScene(scene) || state.currentQuiz.length === 0) return;
     if (!isQuizComplete(state)) return;
 
+    // Show well-done, then mystery reveal
     setOverlay("well-done");
     scheduleTimer(() => {
       setOverlay(null);
-      setTransitioning(true);
-      scheduleTimer(() => {
-        dispatch({ type: "COMPLETE_QUIZ" });
-        // Clear vocab after quiz completes — next dialogue scene will fetch fresh
-        setSceneVocab([]);
-        setTransitioning(false);
-      }, 500);
+      if (currentStory?.mystery) {
+        setPhase("mystery");
+      } else {
+        advanceAfterQuiz();
+      }
     }, 1500);
-  }, [scene, state.quizIndex, state.currentQuiz.length, scheduleTimer]);
+  }, [scene, state.quizIndex, state.currentQuiz.length]);
+
+  const advanceAfterQuiz = useCallback(() => {
+    setTransitioning(true);
+    scheduleTimer(() => {
+      dispatch({ type: "COMPLETE_QUIZ" });
+      setSceneVocab([]);
+      setCurrentStory(null);
+      setTransitioning(false);
+    }, 500);
+  }, [scheduleTimer]);
 
   const confettiParticles = useMemo(
     () =>
@@ -140,21 +166,34 @@ export default function PlayPage() {
   const showQuiz =
     isQuizScene(scene) &&
     !overlay &&
+    phase === "quiz" &&
     state.currentQuiz.length > 0 &&
     state.quizIndex < state.currentQuiz.length;
 
-  // Determine illustration scene (quiz shows parent dialogue scene's illustration)
+  const showMystery =
+    isQuizScene(scene) &&
+    !overlay &&
+    phase === "mystery" &&
+    currentStory?.mystery;
+
   const illustrationScene = isQuizScene(scene)
     ? scene === "QUIZ_1" ? "SCENE_2_TAXI"
       : scene === "QUIZ_2" ? "SCENE_3_MARKET"
       : "SCENE_4_HISTORIAN"
     : scene;
 
+  // Determine TTS source for quiz audio replay
+  const quizTtsSrc = isQuizScene(scene)
+    ? scene === "QUIZ_1" ? "/audio/tts/taxi-driver.mp3"
+      : scene === "QUIZ_2" ? "/audio/tts/vendor.mp3"
+      : "/audio/tts/historian.mp3"
+    : undefined;
+
   return (
     <div className={`min-h-dvh flex flex-col ${transitioning ? "scene-fade-out" : "scene-enter"}`}>
       <ProgressBar scene={scene} />
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-y-auto">
         {/* Arrival */}
         {scene === "SCENE_1_ARRIVAL" && (
           <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
@@ -201,29 +240,48 @@ export default function PlayPage() {
           </div>
         )}
 
-        {/* Quiz scenes — overlay on scene illustration */}
-        {(showQuiz || (isQuizScene(scene) && !overlay)) && (
+        {/* Quiz scenes */}
+        {(showQuiz || (isQuizScene(scene) && !overlay && phase === "quiz")) && (
           <div className="flex-1 relative">
-            {/* Scene illustration dimmed behind */}
             <div className="absolute inset-0 opacity-20">
               <div className="px-4 pt-3">
                 <SceneIllustration scene={illustrationScene} />
               </div>
             </div>
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-            <div className="relative z-10 py-6">
+            <div className="relative z-10 py-4">
               {showQuiz ? (
                 <QuizCard
                   question={state.currentQuiz[state.quizIndex]}
                   questionNumber={state.quizIndex + 1}
                   totalQuestions={state.currentQuiz.length}
                   onAnswer={handleQuizAnswer}
+                  ttsSrc={quizTtsSrc}
                 />
               ) : (
-                <div className="flex-1 flex items-center justify-center pt-20">
+                <div className="flex items-center justify-center pt-20">
                   <div className="text-neutral-400 text-sm animate-pulse">Preparing quiz...</div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Mystery reveal */}
+        {showMystery && currentStory && (
+          <div className="flex-1 relative">
+            <div className="absolute inset-0 opacity-15">
+              <div className="px-4 pt-3">
+                <SceneIllustration scene={illustrationScene} />
+              </div>
+            </div>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div className="relative z-10">
+              <MysteryReveal
+                mystery={currentStory.mystery}
+                reveal={currentStory.mysteryReveal}
+                onContinue={advanceAfterQuiz}
+              />
             </div>
           </div>
         )}
@@ -237,7 +295,7 @@ export default function PlayPage() {
 
         {/* Finale */}
         {isFinale(scene) && (
-          <div className="flex-1 flex flex-col items-center justify-center px-4 text-center relative">
+          <div className="flex-1 flex flex-col items-center px-4 pt-4 text-center relative">
             {showConfetti &&
               confettiParticles.map((p, i) => (
                 <div
@@ -253,20 +311,52 @@ export default function PlayPage() {
                 />
               ))}
 
-            <div className="relative z-10">
+            <div className="relative z-10 w-full">
               <SceneIllustration scene="SCENE_5_FINALE" />
-              <h2 className="text-3xl font-bold text-amber mb-3 scene-enter font-display">
+
+              <h2 className="text-3xl font-bold text-amber mb-2 scene-enter font-display">
                 You found the bookshop!
               </h2>
+
+              {/* Achievement card */}
+              <div className="bg-surface border border-amber/30 rounded-xl p-5 my-4 text-left">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 rounded-full bg-amber/20 flex items-center justify-center text-2xl">
+                    📖
+                  </div>
+                  <div>
+                    <p className="text-amber font-bold text-sm">Istanbul Explorer</p>
+                    <p className="text-neutral-500 text-xs">Level Complete</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="bg-dark rounded-lg p-2">
+                    <p className="text-amber font-bold text-lg">{state.learnedWords.length}</p>
+                    <p className="text-neutral-500 text-[10px] uppercase tracking-wide">Words</p>
+                  </div>
+                  <div className="bg-dark rounded-lg p-2">
+                    <p className="text-amber font-bold text-lg">3</p>
+                    <p className="text-neutral-500 text-[10px] uppercase tracking-wide">Stories</p>
+                  </div>
+                  <div className="bg-dark rounded-lg p-2">
+                    <p className="text-amber font-bold text-lg">3</p>
+                    <p className="text-neutral-500 text-[10px] uppercase tracking-wide">Mysteries</p>
+                  </div>
+                </div>
+              </div>
+
               <VocabSummary words={state.learnedWords} />
+
               <button
                 onClick={() => {
                   dispatch({ type: "RESET" });
                   setSceneVocab([]);
                   setDialogue(null);
+                  setCurrentStory(null);
                   setShowConfetti(false);
+                  setPhase("dialogue");
                 }}
-                className="mt-6 px-6 py-3 border border-amber text-amber rounded-lg text-sm font-semibold uppercase tracking-wide hover:bg-amber/10 transition-colors min-h-[48px]"
+                className="mt-4 mb-8 px-6 py-3 border border-amber text-amber rounded-lg text-sm font-semibold uppercase tracking-wide hover:bg-amber/10 transition-colors min-h-[48px]"
               >
                 Play Again
               </button>

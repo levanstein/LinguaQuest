@@ -6,6 +6,7 @@ import {
   SCENE_ORDER,
   VocabWord,
 } from "./types";
+import { StoryQuizQuestion } from "./fallback-data";
 
 const MAX_RETRIES_PER_WORD = 2;
 
@@ -59,19 +60,34 @@ export function shuffle<T>(arr: T[]): T[] {
   return result;
 }
 
-const FILLER_TRANSLATIONS = [
-  "goodbye", "yes", "no", "please", "thank you",
-  "water", "bread", "house", "big", "small",
-];
+export function generateQuizFromStory(
+  storyQuestions: StoryQuizQuestion[]
+): QuizQuestion[] {
+  return storyQuestions.map((sq) => {
+    const options = shuffle([sq.correctAnswer, ...sq.wrongAnswers]);
+    return {
+      word: sq.vocabWord,
+      options,
+      correctIndex: options.indexOf(sq.correctAnswer),
+      storyQuestion: sq.question,
+      explanation: sq.explanation,
+    };
+  });
+}
 
+// Legacy fallback for when no story is available
 export function generateQuiz(
   sceneVocab: VocabWord[],
   learnedWords: VocabWord[]
 ): QuizQuestion[] {
+  const fillerTranslations = [
+    "goodbye", "yes", "no", "please", "thank you",
+    "water", "bread", "house", "big", "small",
+  ];
   const allTranslations = new Set([
     ...sceneVocab.map((w) => w.translation),
     ...learnedWords.map((w) => w.translation),
-    ...FILLER_TRANSLATIONS,
+    ...fillerTranslations,
   ]);
 
   const quizWords = [...sceneVocab];
@@ -92,7 +108,6 @@ export function generateQuiz(
     const wrongOptions = shuffle(
       translationArray.filter((t) => t !== word.translation)
     ).slice(0, 2);
-
     const options = shuffle([word.translation, ...wrongOptions]);
     return {
       word,
@@ -127,8 +142,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (!correct) {
         const retryCount = nextQuiz.filter((q) => q.word.id === question.word.id).length;
         if (retryCount < MAX_RETRIES_PER_WORD) {
-          const reQuestion = generateQuiz([question.word], [])[0];
-          nextQuiz.push(reQuestion);
+          nextQuiz.push({ ...question, options: shuffle([...question.options]) });
         }
       }
 
