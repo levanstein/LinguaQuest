@@ -6,6 +6,7 @@ function getClient(): Turbopuffer {
   if (!client) {
     client = new Turbopuffer({
       apiKey: process.env.TURBOPUFFER_API_KEY!,
+      region: "aws-us-east-1",
     });
   }
   return client;

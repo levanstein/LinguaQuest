@@ -1,19 +1,52 @@
+import { config } from "dotenv";
+config({ path: ".env.local" });
 import { writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
-import OpenAI from "openai";
+import {
+  BedrockRuntimeClient,
+  InvokeModelCommand,
+} from "@aws-sdk/client-bedrock-runtime";
 import { Turbopuffer } from "@turbopuffer/turbopuffer";
-import { FALLBACK_CITY, FALLBACK_VOCAB, FALLBACK_DIALOGUES } from "../lib/fallback-data";
-import { generateSoundEffect, generateMusic, generateTTS, VOICES } from "../lib/elevenlabs";
+import {
+  FALLBACK_CITY,
+  FALLBACK_VOCAB,
+  FALLBACK_DIALOGUES,
+} from "../lib/fallback-data";
+import {
+  generateSoundEffect,
+  generateMusic,
+  generateTTS,
+  VOICES,
+} from "../lib/elevenlabs";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const tpuf = new Turbopuffer({ apiKey: process.env.TURBOPUFFER_API_KEY! });
+const bedrock = new BedrockRuntimeClient({
+  region: process.env.AWS_REGION || "us-east-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+
+const tpuf = new Turbopuffer({
+  apiKey: process.env.TURBOPUFFER_API_KEY!,
+  region: "aws-us-east-1",
+});
 
 async function embed(text: string): Promise<number[]> {
-  const resp = await openai.embeddings.create({
-    model: "text-embedding-3-small",
-    input: text,
-  });
-  return resp.data[0].embedding;
+  const response = await bedrock.send(
+    new InvokeModelCommand({
+      modelId: "amazon.titan-embed-text-v2:0",
+      contentType: "application/json",
+      accept: "application/json",
+      body: JSON.stringify({
+        inputText: text,
+        dimensions: 1024,
+        normalize: true,
+      }),
+    })
+  );
+  const result = JSON.parse(new TextDecoder().decode(response.body));
+  return result.embedding;
 }
 
 async function seedTurbopuffer() {
@@ -24,6 +57,7 @@ async function seedTurbopuffer() {
   const cityVector = await embed(FALLBACK_CITY.description);
   const citiesNs = tpuf.namespace("cities");
   await citiesNs.write({
+    distance_metric: "cosine_distance",
     upsert_rows: [
       {
         id: FALLBACK_CITY.id,
@@ -42,7 +76,9 @@ async function seedTurbopuffer() {
   console.log("Seeding vocabulary...");
   const vocabRows = [];
   for (const word of FALLBACK_VOCAB) {
-    const vec = await embed(`${word.word} means ${word.translation} in Turkish`);
+    const vec = await embed(
+      `${word.word} means ${word.translation} in Turkish`
+    );
     vocabRows.push({
       id: word.id,
       vector: vec,
@@ -55,7 +91,7 @@ async function seedTurbopuffer() {
     });
   }
   const vocabNs = tpuf.namespace("vocabulary");
-  await vocabNs.write({ upsert_rows: vocabRows });
+  await vocabNs.write({ distance_metric: "cosine_distance", upsert_rows: vocabRows });
   console.log("  ✓ vocabulary namespace seeded");
 
   // 3. Dialogues namespace
@@ -76,19 +112,29 @@ async function seedTurbopuffer() {
     });
   }
   const dialoguesNs = tpuf.namespace("dialogues");
-  await dialoguesNs.write({ upsert_rows: dialogueRows });
+  await dialoguesNs.write({ distance_metric: "cosine_distance", upsert_rows: dialogueRows });
   console.log("  ✓ dialogues namespace seeded");
 
   // 4. Pre-compute query vectors
   console.log("Pre-computing query vectors...");
   const queryVectors: Record<string, number[]> = {};
-  queryVectors["city-search"] = await embed("warm city with markets and spices");
+  queryVectors["city-search"] = await embed(
+    "warm city with markets and spices"
+  );
   queryVectors["dialogue-scene-2"] = await embed("taxi directions airport");
   queryVectors["dialogue-scene-3"] = await embed("bargaining at market");
-  queryVectors["dialogue-scene-4"] = await embed("historian at mosque courtyard");
-  queryVectors["vocab-difficulty-1"] = await embed("basic Turkish greetings and directions");
-  queryVectors["vocab-difficulty-2"] = await embed("Turkish food market shopping words");
-  queryVectors["vocab-difficulty-3"] = await embed("Turkish culture history mosque words");
+  queryVectors["dialogue-scene-4"] = await embed(
+    "historian at mosque courtyard"
+  );
+  queryVectors["vocab-difficulty-1"] = await embed(
+    "basic Turkish greetings and directions"
+  );
+  queryVectors["vocab-difficulty-2"] = await embed(
+    "Turkish food market shopping words"
+  );
+  queryVectors["vocab-difficulty-3"] = await embed(
+    "Turkish culture history mosque words"
+  );
 
   const queryVectorsPath = join(process.cwd(), "lib", "query-vectors.json");
   writeFileSync(queryVectorsPath, JSON.stringify(queryVectors, null, 2));
@@ -108,22 +154,26 @@ async function generateAudio() {
   const sfxTasks = [
     {
       file: "sfx/istanbul-arrival.mp3",
-      prompt: "Istanbul airport arrival, distant call to prayer, seagulls, tram bells, warm Mediterranean breeze",
+      prompt:
+        "Istanbul airport arrival, distant call to prayer, seagulls, tram bells, warm Mediterranean breeze",
       duration: 15,
     },
     {
       file: "sfx/istanbul-bazaar.mp3",
-      prompt: "Busy Istanbul Grand Bazaar, crowd chatter, clinking tea glasses, vendor calls, fabric rustling",
+      prompt:
+        "Busy Istanbul Grand Bazaar, crowd chatter, clinking tea glasses, vendor calls, fabric rustling",
       duration: 15,
     },
     {
       file: "sfx/istanbul-courtyard.mp3",
-      prompt: "Quiet mosque courtyard, stone fountain trickling, pigeons cooing, distant city hum",
+      prompt:
+        "Quiet mosque courtyard, stone fountain trickling, pigeons cooing, distant city hum",
       duration: 15,
     },
     {
       file: "sfx/istanbul-postcard.mp3",
-      prompt: "Istanbul evening panorama, Bosphorus ferry horn, seagulls, distant music, gentle waves on shore",
+      prompt:
+        "Istanbul evening panorama, Bosphorus ferry horn, seagulls, distant music, gentle waves on shore",
       duration: 20,
     },
   ];
@@ -203,8 +253,8 @@ async function generateAudio() {
 async function main() {
   console.log("🎮 LinguaQuest Seed Script\n");
 
-  if (!process.env.OPENAI_API_KEY) {
-    console.error("Missing OPENAI_API_KEY");
+  if (!process.env.AWS_ACCESS_KEY_ID) {
+    console.error("Missing AWS_ACCESS_KEY_ID");
     process.exit(1);
   }
   if (!process.env.TURBOPUFFER_API_KEY) {
