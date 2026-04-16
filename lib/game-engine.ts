@@ -126,7 +126,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       if (!correct) {
         const retryCount = nextQuiz.filter((q) => q.word.id === question.word.id).length;
-        if (retryCount <= MAX_RETRIES_PER_WORD) {
+        if (retryCount < MAX_RETRIES_PER_WORD) {
           const reQuestion = generateQuiz([question.word], [])[0];
           nextQuiz.push(reQuestion);
         }
@@ -141,6 +141,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "COMPLETE_QUIZ": {
+      // All words are learned: wrong answers re-queue, so every word
+      // is eventually answered correctly before the quiz completes.
       const newLearned = state.currentQuiz
         .map((q) => q.word)
         .filter((w) => !state.learnedWords.find((l) => l.id === w.id));

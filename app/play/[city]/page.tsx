@@ -109,7 +109,7 @@ export default function PlayPage() {
         setTransitioning(false);
       }, 500);
     }, 1500);
-  }, [scene, state, scheduleTimer]);
+  }, [scene, state.quizIndex, state.currentQuiz.length, scheduleTimer]);
 
   const confettiParticles = useMemo(
     () =>

@@ -10,7 +10,8 @@ const VECTOR_KEY_BY_SCENE: Record<number, string> = {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const scene = parseInt(searchParams.get("scene") || "2");
+  const raw = parseInt(searchParams.get("scene") || "2");
+  const scene = [2, 3, 4].includes(raw) ? raw : 2;
 
   const results = await queryWithFallback(
     "vocabulary",

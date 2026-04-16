@@ -4,7 +4,8 @@ import { getDialogueForScene, FALLBACK_DIALOGUES } from "@/lib/fallback-data";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const scene = parseInt(searchParams.get("scene") || "2");
+  const raw = parseInt(searchParams.get("scene") || "2");
+  const scene = [2, 3, 4].includes(raw) ? raw : 2;
 
   const fallback = getDialogueForScene(scene) || FALLBACK_DIALOGUES[0];
 
