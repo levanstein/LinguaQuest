@@ -23,52 +23,56 @@ export default function AudioPlayer({
   useEffect(() => {
     if (!audioUnlocked) return;
 
-    const playAudio = async (ref: React.RefObject<HTMLAudioElement | null>) => {
-      if (ref.current) {
-        try {
-          ref.current.volume = ref.current === musicRef.current ? 0.3 : 0.5;
-          ref.current.loop = true;
-          await ref.current.play();
-          setPlaying(true);
-        } catch {
-          setError(true);
-        }
+    const sfx = sfxRef.current;
+    const music = musicRef.current;
+
+    const playAudio = async (el: HTMLAudioElement | null, volume: number) => {
+      if (!el) return;
+      try {
+        el.volume = volume;
+        el.loop = true;
+        await el.play();
+        setPlaying(true);
+      } catch {
+        setError(true);
       }
     };
 
-    if (sfxSrc) playAudio(sfxRef);
-    if (musicSrc) playAudio(musicRef);
+    if (sfxSrc) playAudio(sfx, 0.5);
+    if (musicSrc) playAudio(music, 0.3);
 
     return () => {
-      sfxRef.current?.pause();
-      musicRef.current?.pause();
+      sfx?.pause();
+      music?.pause();
     };
   }, [sfxSrc, musicSrc, audioUnlocked]);
 
   return (
-    <div className="sticky bottom-0 bg-[#1A1A1A] border-t border-[#2A2A2A] px-4 py-3 flex items-center gap-3"
-         style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}>
-      {sfxSrc && <audio ref={sfxRef} src={sfxSrc} preload="auto" />}
-      {musicSrc && <audio ref={musicRef} src={musicSrc} preload="auto" />}
+    <div
+      className="sticky bottom-0 bg-surface border-t border-border px-4 py-3 flex items-center gap-3"
+      style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
+    >
+      {sfxSrc && <audio ref={sfxRef} src={sfxSrc} preload="metadata" />}
+      {musicSrc && <audio ref={musicRef} src={musicSrc} preload="metadata" />}
 
       <div className="flex items-center gap-1.5">
         {playing &&
           [1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="w-0.5 bg-amber-500 rounded-full waveform-bar"
+              className="w-0.5 bg-amber rounded-full waveform-bar"
               style={{ animationDelay: `${i * 0.15}s` }}
             />
           ))}
         {!playing && !error && (
-          <span className="text-xs text-[#A3A3A3]">Loading...</span>
+          <span className="text-xs text-neutral-400">Loading...</span>
         )}
         {error && (
-          <span className="text-xs text-[#A3A3A3]">🔇 Audio unavailable</span>
+          <span className="text-xs text-neutral-400">Audio unavailable</span>
         )}
       </div>
 
-      <span className="text-xs text-[#A3A3A3] flex-1 truncate">{label}</span>
+      <span className="text-xs text-neutral-400 flex-1 truncate">{label}</span>
     </div>
   );
 }

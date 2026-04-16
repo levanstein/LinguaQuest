@@ -1,30 +1,23 @@
 import { NextResponse } from "next/server";
-import { queryVectors } from "@/lib/turbopuffer";
+import { queryWithFallback } from "@/lib/turbopuffer";
 import { FALLBACK_CITY } from "@/lib/fallback-data";
-import queryVectorsData from "@/lib/query-vectors.json";
 
 export async function GET() {
-  try {
-    const vector = (queryVectorsData as Record<string, number[]>)["city-search"];
+  const results = await queryWithFallback(
+    "cities",
+    "city-search",
+    1,
+    undefined,
+    (r) => ({
+      id: r.id as string,
+      name: r["name"] as string,
+      country: r["country"] as string,
+      description: r["description"] as string,
+      themeColor: r["theme_color"] as string,
+      difficulty: r["difficulty"] as string,
+    }),
+    [FALLBACK_CITY]
+  );
 
-    if (vector && vector.length > 0) {
-      const results = await queryVectors("cities", vector, 1);
-
-      if (results.length > 0) {
-        const r = results[0];
-        return NextResponse.json({
-          id: r.id,
-          name: r["name"],
-          country: r["country"],
-          description: r["description"],
-          themeColor: r["theme_color"],
-          difficulty: r["difficulty"],
-        });
-      }
-    }
-  } catch (e) {
-    console.error("turbopuffer city query failed, using fallback:", e);
-  }
-
-  return NextResponse.json(FALLBACK_CITY);
+  return NextResponse.json(results[0]);
 }

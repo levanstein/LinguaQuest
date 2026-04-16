@@ -1,10 +1,13 @@
 import {
+  GameAction,
   GameState,
   QuizQuestion,
   SceneId,
   SCENE_ORDER,
   VocabWord,
 } from "./types";
+
+const MAX_RETRIES_PER_WORD = 2;
 
 export function createInitialState(): GameState {
   return {
@@ -17,7 +20,7 @@ export function createInitialState(): GameState {
   };
 }
 
-export function advanceScene(state: GameState): GameState {
+function advanceScene(state: GameState): GameState {
   const currentIndex = SCENE_ORDER.indexOf(state.currentScene);
   if (currentIndex === -1 || currentIndex >= SCENE_ORDER.length - 1) {
     return state;
@@ -25,6 +28,7 @@ export function advanceScene(state: GameState): GameState {
   return {
     ...state,
     currentScene: SCENE_ORDER[currentIndex + 1],
+    currentQuiz: [],
     quizIndex: 0,
     quizCorrect: 0,
   };
@@ -46,7 +50,7 @@ export function isFinale(scene: SceneId): boolean {
   return scene === "SCENE_5_FINALE";
 }
 
-function shuffle<T>(arr: T[]): T[] {
+export function shuffle<T>(arr: T[]): T[] {
   const result = [...arr];
   for (let i = result.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -55,39 +59,38 @@ function shuffle<T>(arr: T[]): T[] {
   return result;
 }
 
+const FILLER_TRANSLATIONS = [
+  "goodbye", "yes", "no", "please", "thank you",
+  "water", "bread", "house", "big", "small",
+];
+
 export function generateQuiz(
   sceneVocab: VocabWord[],
   learnedWords: VocabWord[]
 ): QuizQuestion[] {
-  const allTranslations = [
+  const allTranslations = new Set([
     ...sceneVocab.map((w) => w.translation),
     ...learnedWords.map((w) => w.translation),
-    "goodbye",
-    "yes",
-    "no",
-    "please",
-    "thank you",
-    "water",
-    "bread",
-    "house",
-    "big",
-    "small",
-  ];
+    ...FILLER_TRANSLATIONS,
+  ]);
 
-  // Current scene words + 1-2 random from learned
   const quizWords = [...sceneVocab];
+  const seenIds = new Set(quizWords.map((w) => w.id));
+
   if (learnedWords.length > 0) {
-    const sample = shuffle(learnedWords).slice(0, Math.min(2, learnedWords.length));
-    for (const w of sample) {
-      if (!quizWords.find((q) => q.id === w.id)) {
-        quizWords.push(w);
-      }
+    for (const w of shuffle(learnedWords)) {
+      if (seenIds.has(w.id)) continue;
+      quizWords.push(w);
+      seenIds.add(w.id);
+      if (quizWords.length - sceneVocab.length >= 2) break;
     }
   }
 
+  const translationArray = [...allTranslations];
+
   return shuffle(quizWords).map((word) => {
     const wrongOptions = shuffle(
-      allTranslations.filter((t) => t !== word.translation)
+      translationArray.filter((t) => t !== word.translation)
     ).slice(0, 2);
 
     const options = shuffle([word.translation, ...wrongOptions]);
@@ -99,40 +102,59 @@ export function generateQuiz(
   });
 }
 
-export function answerQuiz(
-  state: GameState,
-  selectedIndex: number
-): { correct: boolean; newState: GameState } {
-  const question = state.currentQuiz[state.quizIndex];
-  const correct = selectedIndex === question.correctIndex;
-
-  const newState: GameState = {
-    ...state,
-    quizIndex: state.quizIndex + 1,
-    quizCorrect: correct ? state.quizCorrect + 1 : state.quizCorrect,
-  };
-
-  // If wrong, re-add the word to the end of the quiz
-  if (!correct) {
-    const reQuestion = generateQuiz([question.word], [])[0];
-    newState.currentQuiz = [...state.currentQuiz, reQuestion];
-  }
-
-  return { correct, newState };
-}
-
 export function isQuizComplete(state: GameState): boolean {
   return state.quizIndex >= state.currentQuiz.length;
 }
 
-export function completeQuiz(state: GameState): GameState {
-  // Add all quiz words to learnedWords
-  const newLearned = state.currentQuiz
-    .map((q) => q.word)
-    .filter((w) => !state.learnedWords.find((l) => l.id === w.id));
+export function gameReducer(state: GameState, action: GameAction): GameState {
+  switch (action.type) {
+    case "UNLOCK_AUDIO":
+      return { ...state, audioUnlocked: true };
 
-  return {
-    ...state,
-    learnedWords: [...state.learnedWords, ...newLearned],
-  };
+    case "ADVANCE_SCENE":
+      return advanceScene(state);
+
+    case "SET_QUIZ":
+      return { ...state, currentQuiz: action.quiz, quizIndex: 0, quizCorrect: 0 };
+
+    case "ANSWER_QUIZ": {
+      if (state.quizIndex >= state.currentQuiz.length) return state;
+
+      const question = state.currentQuiz[state.quizIndex];
+      const correct = action.selectedIndex === question.correctIndex;
+      const nextQuiz = [...state.currentQuiz];
+
+      if (!correct) {
+        const retryCount = nextQuiz.filter((q) => q.word.id === question.word.id).length;
+        if (retryCount <= MAX_RETRIES_PER_WORD) {
+          const reQuestion = generateQuiz([question.word], [])[0];
+          nextQuiz.push(reQuestion);
+        }
+      }
+
+      return {
+        ...state,
+        currentQuiz: nextQuiz,
+        quizIndex: state.quizIndex + 1,
+        quizCorrect: correct ? state.quizCorrect + 1 : state.quizCorrect,
+      };
+    }
+
+    case "COMPLETE_QUIZ": {
+      const newLearned = state.currentQuiz
+        .map((q) => q.word)
+        .filter((w) => !state.learnedWords.find((l) => l.id === w.id));
+
+      return advanceScene({
+        ...state,
+        learnedWords: [...state.learnedWords, ...newLearned],
+      });
+    }
+
+    case "RESET":
+      return createInitialState();
+
+    default:
+      return state;
+  }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import ProgressBar from "@/components/ProgressBar";
 import AudioPlayer from "@/components/AudioPlayer";
 import DialogueBubble from "@/components/DialogueBubble";
@@ -8,143 +8,165 @@ import QuizCard from "@/components/QuizCard";
 import VocabSummary from "@/components/VocabSummary";
 import {
   createInitialState,
-  advanceScene,
+  gameReducer,
   isQuizScene,
   isDialogueScene,
   isFinale,
-  generateQuiz,
-  answerQuiz,
   isQuizComplete,
-  completeQuiz,
+  generateQuiz,
 } from "@/lib/game-engine";
-import { SCENE_CONFIGS, type GameState, type VocabWord, type DialogueData } from "@/lib/types";
+import { SCENE_CONFIGS, type VocabWord, type DialogueData } from "@/lib/types";
 import { getVocabForScene, getDialogueForScene } from "@/lib/fallback-data";
 
 export default function PlayPage() {
-  const [gameState, setGameState] = useState<GameState>(createInitialState);
+  const [state, dispatch] = useReducer(gameReducer, undefined, createInitialState);
   const [transitioning, setTransitioning] = useState(false);
-  const [showWellDone, setShowWellDone] = useState(false);
+  const [overlay, setOverlay] = useState<"well-done" | null>(null);
   const [dialogue, setDialogue] = useState<DialogueData | null>(null);
   const [sceneVocab, setSceneVocab] = useState<VocabWord[]>([]);
-  const [confetti, setConfetti] = useState(false);
+  const quizGenerated = useRef(false);
+  const transitionTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  const scene = gameState.currentScene;
+  const scene = state.currentScene;
   const config = SCENE_CONFIGS[scene];
+
+  // Clear all timers on unmount
+  useEffect(() => {
+    return () => {
+      transitionTimers.current.forEach(clearTimeout);
+    };
+  }, []);
 
   // Fetch dialogue and vocab for current scene
   useEffect(() => {
-    if (isDialogueScene(scene)) {
-      const sceneNum = config?.sceneNumber || 2;
+    if (!isDialogueScene(scene)) return;
 
-      // Try API first, fall back to local data
-      fetch(`/api/dialogue?scene=${sceneNum}`)
-        .then((r) => r.json())
-        .then((d) => setDialogue(d))
-        .catch(() => setDialogue(getDialogueForScene(sceneNum) || null));
+    const controller = new AbortController();
+    const sceneNum = config?.sceneNumber || 2;
 
-      fetch(`/api/vocab?scene=${sceneNum}`)
-        .then((r) => r.json())
-        .then((v) => setSceneVocab(Array.isArray(v) ? v : []))
-        .catch(() => setSceneVocab(getVocabForScene(sceneNum)));
-    }
+    Promise.all([
+      fetch(`/api/dialogue?scene=${sceneNum}`, { signal: controller.signal })
+        .then((r) => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); }),
+      fetch(`/api/vocab?scene=${sceneNum}`, { signal: controller.signal })
+        .then((r) => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); }),
+    ])
+      .then(([d, v]) => {
+        setDialogue(d);
+        setSceneVocab(Array.isArray(v) ? v : []);
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setDialogue(getDialogueForScene(sceneNum) || null);
+        setSceneVocab(getVocabForScene(sceneNum));
+      });
+
+    return () => controller.abort();
   }, [scene, config?.sceneNumber]);
 
-  // When entering a quiz scene, generate quiz questions
+  // Generate quiz when entering a quiz scene
   useEffect(() => {
-    if (isQuizScene(scene) && gameState.currentQuiz.length === 0) {
-      const quiz = generateQuiz(sceneVocab, gameState.learnedWords);
-      setGameState((s) => ({ ...s, currentQuiz: quiz }));
+    if (isQuizScene(scene) && !quizGenerated.current) {
+      quizGenerated.current = true;
+      const quiz = generateQuiz(sceneVocab, state.learnedWords);
+      dispatch({ type: "SET_QUIZ", quiz });
     }
-  }, [scene, sceneVocab, gameState.learnedWords, gameState.currentQuiz.length]);
+    if (!isQuizScene(scene)) {
+      quizGenerated.current = false;
+    }
+  }, [scene, sceneVocab, state.learnedWords]);
+
+  const scheduleTimer = useCallback((fn: () => void, ms: number) => {
+    const id = setTimeout(fn, ms);
+    transitionTimers.current.push(id);
+    return id;
+  }, []);
 
   const handleTransition = useCallback(() => {
     setTransitioning(true);
-    setTimeout(() => {
-      setGameState((s) => advanceScene(s));
+    scheduleTimer(() => {
+      dispatch({ type: "ADVANCE_SCENE" });
       setDialogue(null);
       setSceneVocab([]);
       setTransitioning(false);
     }, 500);
+  }, [scheduleTimer]);
+
+  const handleQuizAnswer = useCallback((selectedIndex: number) => {
+    dispatch({ type: "ANSWER_QUIZ", selectedIndex });
   }, []);
 
-  const handleQuizComplete = useCallback(() => {
-    setShowWellDone(true);
-    const completed = completeQuiz(gameState);
-    setGameState(completed);
+  // Check if quiz is complete after state update
+  useEffect(() => {
+    if (!isQuizScene(scene) || state.currentQuiz.length === 0) return;
+    if (!isQuizComplete(state)) return;
 
-    setTimeout(() => {
-      setShowWellDone(false);
+    setOverlay("well-done");
+    scheduleTimer(() => {
+      setOverlay(null);
       setTransitioning(true);
-      setTimeout(() => {
-        setGameState((s) => ({
-          ...advanceScene(s),
-          learnedWords: completed.learnedWords,
-          currentQuiz: [],
-        }));
+      scheduleTimer(() => {
+        dispatch({ type: "COMPLETE_QUIZ" });
         setTransitioning(false);
       }, 500);
     }, 1500);
-  }, [gameState]);
+  }, [scene, state, scheduleTimer]);
 
-  const handleQuizAnswer = useCallback(
-    (selectedIndex: number) => {
-      const { newState } = answerQuiz(gameState, selectedIndex);
-      setGameState(newState);
-
-      if (isQuizComplete(newState)) {
-        setTimeout(() => handleQuizComplete(), 300);
-      }
-    },
-    [gameState, handleQuizComplete]
+  const confettiParticles = useMemo(
+    () =>
+      Array.from({ length: 20 }, (_, i) => ({
+        left: `${Math.random() * 100}%`,
+        top: `${-10 + Math.random() * 20}%`,
+        delay: `${Math.random() * 2}s`,
+        duration: `${2 + Math.random() * 2}s`,
+        color: ["#F59E0B", "#FBBF24", "#FDE68A"][i % 3],
+      })),
+    []
   );
 
-  const unlockAudio = useCallback(() => {
-    setGameState((s) => ({ ...s, audioUnlocked: true }));
-  }, []);
-
-  // Trigger confetti for finale
+  const [showConfetti, setShowConfetti] = useState(false);
   useEffect(() => {
-    if (isFinale(scene)) {
-      setTimeout(() => setConfetti(true), 500);
-    }
-  }, [scene]);
+    if (!isFinale(scene)) return;
+    const id = scheduleTimer(() => setShowConfetti(true), 500);
+    return () => clearTimeout(id);
+  }, [scene, scheduleTimer]);
+
+  const audioLabel = config?.npcName
+    ? `${config.npcName} · Istanbul`
+    : isFinale(scene)
+    ? "Istanbul Sound Postcard"
+    : "Istanbul Arrival";
+
+  const showQuiz =
+    isQuizScene(scene) &&
+    !overlay &&
+    state.currentQuiz.length > 0 &&
+    state.quizIndex < state.currentQuiz.length;
 
   return (
     <div className={`min-h-dvh flex flex-col ${transitioning ? "scene-fade-out" : "scene-enter"}`}>
       <ProgressBar scene={scene} />
 
       <div className="flex-1 flex flex-col">
-        {/* ARRIVAL */}
+        {/* Arrival */}
         {scene === "SCENE_1_ARRIVAL" && (
           <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-            {/* Skyline gradient */}
             <div
               className="absolute inset-0 opacity-30"
               style={{
-                background:
-                  "linear-gradient(180deg, transparent 30%, #2d1d0a 60%, #1a1205 80%, transparent 100%)",
+                background: "linear-gradient(180deg, transparent 30%, #2d1d0a 60%, #1a1205 80%, transparent 100%)",
               }}
             />
             <div className="relative z-10">
-              <h2
-                className="text-3xl font-bold text-amber-500 mb-4"
-                style={{ fontFamily: "Georgia, serif" }}
-              >
-                Istanbul
-              </h2>
-              <p
-                className="text-white text-lg leading-relaxed mb-8 max-w-[320px]"
-                style={{ fontFamily: "Georgia, serif" }}
-              >
-                You just landed in Istanbul. Find the hidden bookshop in
-                Sultanahmet before sunset.
+              <h2 className="text-3xl font-bold text-amber mb-4 font-display">Istanbul</h2>
+              <p className="text-white text-lg leading-relaxed mb-8 max-w-[320px] font-display">
+                You just landed in Istanbul. Find the hidden bookshop in Sultanahmet before sunset.
               </p>
               <button
                 onClick={() => {
-                  unlockAudio();
+                  dispatch({ type: "UNLOCK_AUDIO" });
                   handleTransition();
                 }}
-                className="px-8 py-4 bg-amber-500 text-black rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-amber-400 transition-colors min-h-[48px]"
+                className="px-8 py-4 bg-amber text-black rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-amber-400 transition-colors min-h-[48px]"
               >
                 Begin
               </button>
@@ -152,89 +174,78 @@ export default function PlayPage() {
           </div>
         )}
 
-        {/* DIALOGUE SCENES */}
+        {/* Dialogue scenes */}
         {isDialogueScene(scene) && dialogue && (
           <DialogueBubble
             npcName={dialogue.npcName}
             transcript={dialogue.transcript}
             vocabWords={sceneVocab}
             ttsSrc={config?.tts}
-            audioUnlocked={gameState.audioUnlocked}
+            audioUnlocked={state.audioUnlocked}
             onContinue={handleTransition}
           />
         )}
 
         {isDialogueScene(scene) && !dialogue && (
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-[#A3A3A3] text-sm animate-pulse">Loading encounter...</div>
+            <div className="text-neutral-400 text-sm animate-pulse">Loading encounter...</div>
           </div>
         )}
 
-        {/* QUIZ SCENES */}
-        {isQuizScene(scene) && !showWellDone && gameState.currentQuiz.length > 0 && (
+        {/* Quiz scenes */}
+        {showQuiz && (
           <div className="flex-1 relative">
-            {/* Dimmed background overlay */}
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <div className="relative z-10 py-6">
               <QuizCard
-                question={gameState.currentQuiz[gameState.quizIndex]}
-                questionNumber={gameState.quizIndex + 1}
-                totalQuestions={gameState.currentQuiz.length}
+                question={state.currentQuiz[state.quizIndex]}
+                questionNumber={state.quizIndex + 1}
+                totalQuestions={state.currentQuiz.length}
                 onAnswer={handleQuizAnswer}
               />
             </div>
           </div>
         )}
 
-        {/* WELL DONE INTERSTITIAL */}
-        {showWellDone && (
+        {isQuizScene(scene) && !showQuiz && !overlay && (
           <div className="flex-1 flex items-center justify-center">
-            <p
-              className="text-2xl font-bold text-amber-500 scene-enter"
-              style={{ fontFamily: "Georgia, serif" }}
-            >
-              Well done!
-            </p>
+            <div className="text-neutral-400 text-sm animate-pulse">Preparing quiz...</div>
           </div>
         )}
 
-        {/* FINALE */}
+        {/* Well done interstitial */}
+        {overlay === "well-done" && (
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-2xl font-bold text-amber scene-enter font-display">Well done!</p>
+          </div>
+        )}
+
+        {/* Finale */}
         {isFinale(scene) && (
           <div className="flex-1 flex flex-col items-center justify-center px-6 text-center relative">
-            {/* Confetti */}
-            {confetti &&
-              Array.from({ length: 20 }, (_, i) => (
+            {showConfetti &&
+              confettiParticles.map((p, i) => (
                 <div
                   key={i}
                   className="confetti-particle"
                   style={{
-                    left: `${Math.random() * 100}%`,
-                    top: `${-10 + Math.random() * 20}%`,
-                    animationDelay: `${Math.random() * 2}s`,
-                    animationDuration: `${2 + Math.random() * 2}s`,
-                    background:
-                      i % 3 === 0
-                        ? "#F59E0B"
-                        : i % 3 === 1
-                        ? "#FBBF24"
-                        : "#FDE68A",
+                    left: p.left,
+                    top: p.top,
+                    animationDelay: p.delay,
+                    animationDuration: p.duration,
+                    background: p.color,
                   }}
                 />
               ))}
 
             <div className="relative z-10">
-              <h2
-                className="text-3xl font-bold text-amber-500 mb-3 scene-enter"
-                style={{ fontFamily: "Georgia, serif" }}
-              >
+              <h2 className="text-3xl font-bold text-amber mb-3 scene-enter font-display">
                 You found the bookshop!
               </h2>
-
-              <VocabSummary words={gameState.learnedWords} />
-
+              <VocabSummary words={state.learnedWords} />
               <button
-                onClick={() => window.location.reload()}
-                className="mt-6 px-6 py-3 border border-amber-500 text-amber-500 rounded-lg text-sm font-semibold uppercase tracking-wide hover:bg-amber-500/10 transition-colors min-h-[48px]"
+                onClick={() => dispatch({ type: "RESET" })}
+                className="mt-6 px-6 py-3 border border-amber text-amber rounded-lg text-sm font-semibold uppercase tracking-wide hover:bg-amber/10 transition-colors min-h-[48px]"
               >
                 Play Again
               </button>
@@ -243,19 +254,12 @@ export default function PlayPage() {
         )}
       </div>
 
-      {/* Audio player — always at bottom */}
       {scene !== "SCENE_1_ARRIVAL" && (
         <AudioPlayer
           sfxSrc={config?.sfx}
           musicSrc={config?.music}
-          label={
-            scene === "SCENE_5_FINALE"
-              ? "Istanbul Sound Postcard"
-              : config?.npcName
-              ? `${config.npcName} · Istanbul`
-              : "Istanbul Arrival"
-          }
-          audioUnlocked={gameState.audioUnlocked}
+          label={audioLabel}
+          audioUnlocked={state.audioUnlocked}
         />
       )}
     </div>

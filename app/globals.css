@@ -6,6 +6,7 @@
   --color-border: #2A2A2A;
   --color-amber: #F59E0B;
   --color-amber-glow: rgba(245, 158, 11, 0.3);
+  --font-display: Georgia, serif;
 }
 
 html, body {

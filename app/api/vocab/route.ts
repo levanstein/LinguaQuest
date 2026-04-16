@@ -1,40 +1,33 @@
 import { NextResponse } from "next/server";
-import { queryVectors } from "@/lib/turbopuffer";
+import { queryWithFallback } from "@/lib/turbopuffer";
 import { getVocabForScene } from "@/lib/fallback-data";
-import queryVectorsData from "@/lib/query-vectors.json";
+
+const VECTOR_KEY_BY_SCENE: Record<number, string> = {
+  2: "vocab-difficulty-1",
+  3: "vocab-difficulty-2",
+  4: "vocab-difficulty-3",
+};
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const scene = parseInt(searchParams.get("scene") || "2");
 
-  try {
-    const difficultyMap: Record<number, string> = {
-      2: "vocab-difficulty-1",
-      3: "vocab-difficulty-2",
-      4: "vocab-difficulty-3",
-    };
-    const vectorKey = difficultyMap[scene] || "vocab-difficulty-1";
-    const vector = (queryVectorsData as Record<string, number[]>)[vectorKey];
+  const results = await queryWithFallback(
+    "vocabulary",
+    VECTOR_KEY_BY_SCENE[scene] || "vocab-difficulty-1",
+    10,
+    ["scene", "Eq", scene],
+    (r) => ({
+      id: r.id as string,
+      word: r["word"] as string,
+      translation: r["translation"] as string,
+      difficulty: r["difficulty"] as number,
+      category: r["category"] as string,
+      city: r["city"] as string,
+      scene: r["scene"] as number,
+    }),
+    getVocabForScene(scene)
+  );
 
-    if (vector && vector.length > 0) {
-      const results = await queryVectors("vocabulary", vector, 10, ["scene", "Eq", scene]);
-
-      if (results.length > 0) {
-        const vocab = results.map((r) => ({
-          id: r.id,
-          word: r["word"],
-          translation: r["translation"],
-          difficulty: r["difficulty"],
-          category: r["category"],
-          city: r["city"],
-          scene: r["scene"],
-        }));
-        return NextResponse.json(vocab);
-      }
-    }
-  } catch (e) {
-    console.error("turbopuffer vocab query failed, using fallback:", e);
-  }
-
-  return NextResponse.json(getVocabForScene(scene));
+  return NextResponse.json(results);
 }

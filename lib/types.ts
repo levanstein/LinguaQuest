@@ -25,7 +25,7 @@ export interface CityData {
   country: string;
   description: string;
   themeColor: string;
-  difficulty: string;
+  difficulty: "beginner" | "intermediate" | "advanced";
 }
 
 export type SceneId =
@@ -43,6 +43,14 @@ export interface QuizQuestion {
   options: string[];
   correctIndex: number;
 }
+
+export type GameAction =
+  | { type: "UNLOCK_AUDIO" }
+  | { type: "ADVANCE_SCENE" }
+  | { type: "SET_QUIZ"; quiz: QuizQuestion[] }
+  | { type: "ANSWER_QUIZ"; selectedIndex: number }
+  | { type: "COMPLETE_QUIZ" }
+  | { type: "RESET" };
 
 export interface GameState {
   currentScene: SceneId;
@@ -84,7 +92,7 @@ export interface SceneConfig {
   sceneNumber: number;
 }
 
-export const SCENE_CONFIGS: Record<string, SceneConfig> = {
+export const SCENE_CONFIGS: Partial<Record<SceneId, SceneConfig>> = {
   SCENE_1_ARRIVAL: {
     id: "SCENE_1_ARRIVAL",
     sfx: "/audio/sfx/istanbul-arrival.mp3",

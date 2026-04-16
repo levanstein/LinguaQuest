@@ -1,37 +1,30 @@
 import { NextResponse } from "next/server";
-import { queryVectors } from "@/lib/turbopuffer";
-import { getDialogueForScene } from "@/lib/fallback-data";
-import queryVectorsData from "@/lib/query-vectors.json";
+import { queryWithFallback } from "@/lib/turbopuffer";
+import { getDialogueForScene, FALLBACK_DIALOGUES } from "@/lib/fallback-data";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const scene = parseInt(searchParams.get("scene") || "2");
 
-  try {
-    const vectorKey = `dialogue-scene-${scene}`;
-    const vector = (queryVectorsData as Record<string, number[]>)[vectorKey];
+  const fallback = getDialogueForScene(scene) || FALLBACK_DIALOGUES[0];
 
-    if (vector && vector.length > 0) {
-      const results = await queryVectors("dialogues", vector, 1, ["scene", "Eq", scene]);
+  const results = await queryWithFallback(
+    "dialogues",
+    `dialogue-scene-${scene}`,
+    1,
+    ["scene", "Eq", scene],
+    (r) => ({
+      id: r.id as string,
+      city: r["city"] as string,
+      scene: r["scene"] as number,
+      difficulty: r["difficulty"] as number,
+      npcName: r["npc_name"] as string,
+      situation: r["situation"] as string,
+      transcript: r["transcript"] as string,
+      vocabIds: ((r["vocab_ids"] as string) || "").split(","),
+    }),
+    [fallback]
+  );
 
-      if (results.length > 0) {
-        const r = results[0];
-        return NextResponse.json({
-          id: r.id,
-          city: r["city"],
-          scene: r["scene"],
-          difficulty: r["difficulty"],
-          npcName: r["npc_name"],
-          situation: r["situation"],
-          transcript: r["transcript"],
-          vocabIds: ((r["vocab_ids"] as string) || "").split(","),
-        });
-      }
-    }
-  } catch (e) {
-    console.error("turbopuffer dialogue query failed, using fallback:", e);
-  }
-
-  const fallback = getDialogueForScene(scene);
-  return NextResponse.json(fallback || { error: "No dialogue found" });
+  return NextResponse.json(results[0]);
 }

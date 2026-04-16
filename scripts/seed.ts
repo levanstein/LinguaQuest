@@ -6,7 +6,6 @@ import {
   BedrockRuntimeClient,
   InvokeModelCommand,
 } from "@aws-sdk/client-bedrock-runtime";
-import { Turbopuffer } from "@turbopuffer/turbopuffer";
 import {
   FALLBACK_CITY,
   FALLBACK_VOCAB,
@@ -18,6 +17,7 @@ import {
   generateTTS,
   VOICES,
 } from "../lib/elevenlabs";
+import { getClient } from "../lib/turbopuffer";
 
 const bedrock = new BedrockRuntimeClient({
   region: process.env.AWS_REGION || "us-east-1",
@@ -27,10 +27,7 @@ const bedrock = new BedrockRuntimeClient({
   },
 });
 
-const tpuf = new Turbopuffer({
-  apiKey: process.env.TURBOPUFFER_API_KEY!,
-  region: "aws-us-east-1",
-});
+const tpuf = getClient();
 
 async function embed(text: string): Promise<number[]> {
   const response = await bedrock.send(
@@ -214,24 +211,21 @@ async function generateAudio() {
     }
   }
 
-  // TTS
-  const ttsTasks = [
-    {
-      file: "tts/taxi-driver.mp3",
-      voiceId: VOICES.taxiDriver,
-      text: "Merhaba! Where you go? Ah, Sultanahmet! Go sola, left, then düz, straight. Kolay! Easy!",
-    },
-    {
-      file: "tts/vendor.mp3",
-      voiceId: VOICES.vendor,
-      text: "Hoş geldiniz! Welcome! You want çay? Tea? Beş lira, five lira. Çok güzel, very beautiful this carpet...",
-    },
-    {
-      file: "tts/historian.mp3",
-      voiceId: VOICES.historian,
-      text: "Bu cami çok eski, this mosque very old. Dört yüz yıl, four hundred years. Kitapçı mı arıyorsunuz? You search bookshop?",
-    },
-  ];
+  // TTS — derive text from fallback dialogues (single source of truth)
+  const voiceMap: Record<string, { file: string; voiceId: string }> = {
+    "istanbul-taxi": { file: "tts/taxi-driver.mp3", voiceId: VOICES.taxiDriver },
+    "istanbul-vendor": { file: "tts/vendor.mp3", voiceId: VOICES.vendor },
+    "istanbul-historian": { file: "tts/historian.mp3", voiceId: VOICES.historian },
+  };
+
+  const ttsTasks = FALLBACK_DIALOGUES.map((d) => {
+    const mapping = voiceMap[d.id];
+    return {
+      file: mapping.file,
+      voiceId: mapping.voiceId,
+      text: d.transcript.replace(/—/g, ","),
+    };
+  });
 
   console.log("Generating TTS...");
   for (const task of ttsTasks) {
