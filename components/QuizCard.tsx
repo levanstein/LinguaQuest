@@ -30,14 +30,13 @@ export default function QuizCard({
 
   const handleSelect = (index: number) => {
     if (selected !== null) return;
-
     setSelected(index);
     const isCorrect = index === question.correctIndex;
     setFeedback(isCorrect ? "correct" : "wrong");
 
     if (isCorrect) {
       setShowExplanation(true);
-      setTimeout(() => onAnswer(index), 2500);
+      setTimeout(() => onAnswer(index), 2800);
     } else {
       setTimeout(() => {
         setSelected(null);
@@ -54,51 +53,71 @@ export default function QuizCard({
     }
   };
 
-  const isStoryQuestion = !!question.storyQuestion;
-
   return (
     <div className="scene-enter px-4">
       <audio ref={wordAudioRef} src={wordAudioSrc} preload="metadata" />
 
-      {/* Question header */}
-      <div className="text-center mb-4">
-        <p className="text-xs text-neutral-500 mb-1">
-          Question {questionNumber} of {totalQuestions}
-        </p>
+      {/* Progress dots */}
+      <div className="flex justify-center gap-1.5 mb-5">
+        {Array.from({ length: totalQuestions }, (_, i) => (
+          <div
+            key={i}
+            className="w-2 h-2 rounded-full transition-all duration-300"
+            style={{
+              background: i < questionNumber
+                ? "oklch(0.78 0.17 75)"
+                : i === questionNumber - 1
+                ? "oklch(0.78 0.17 75)"
+                : "oklch(0.25 0.01 75)",
+              transform: i === questionNumber - 1 ? "scale(1.3)" : "scale(1)",
+            }}
+          />
+        ))}
       </div>
 
-      {/* Story-based question */}
-      {isStoryQuestion ? (
-        <div className="bg-surface border border-border rounded-xl p-4 mb-5">
-          <p className="text-base leading-relaxed text-white font-display">
+      {/* Question — story-based */}
+      {question.storyQuestion ? (
+        <div
+          className="rounded-2xl p-4 mb-5"
+          style={{ background: "oklch(0.17 0.01 75)", border: "1px solid oklch(0.24 0.012 75)" }}
+        >
+          <p className="font-[var(--font-story)] text-base leading-relaxed" style={{ color: "oklch(0.92 0.005 75)" }}>
             {question.storyQuestion}
           </p>
         </div>
       ) : (
         <div
-          className="mx-auto mb-6 p-5 rounded-xl border-2 border-amber bg-surface text-center max-w-[280px]"
-          style={{ boxShadow: "0 0 20px var(--color-amber-glow)" }}
+          className="mx-auto mb-6 p-5 rounded-2xl text-center max-w-[260px]"
+          style={{
+            background: "oklch(0.17 0.01 75)",
+            border: "2px solid oklch(0.78 0.17 75 / 0.4)",
+            boxShadow: "0 0 24px oklch(0.78 0.17 75 / 0.1)",
+          }}
         >
-          <p className="text-2xl font-bold text-amber glow-pulse font-display">
+          <p className="text-2xl font-bold glow-pulse font-[var(--font-story)]" style={{ color: "oklch(0.78 0.17 75)" }}>
             {question.word.word}
           </p>
         </div>
       )}
 
-      {/* Answer options */}
+      {/* Options */}
       <div className="space-y-2">
         {question.options.map((option, i) => {
-          let className =
-            "w-full text-left px-4 py-3 rounded-lg border transition-all min-h-[48px] text-sm font-medium ";
+          const base = "w-full text-left px-4 py-3 rounded-xl transition-all min-h-[48px] text-sm font-medium ";
 
-          if (selected === i) {
-            className += feedback === "correct"
-              ? "border-green-500 bg-green-500/20 text-green-400 quiz-correct"
-              : "border-red-500 bg-red-500/20 text-red-400 quiz-wrong";
+          let style: React.CSSProperties;
+          let extraClass = "";
+
+          if (selected === i && feedback === "correct") {
+            style = { background: "oklch(0.72 0.19 145 / 0.15)", border: "1px solid oklch(0.72 0.19 145 / 0.4)", color: "oklch(0.80 0.15 145)" };
+            extraClass = "quiz-correct";
+          } else if (selected === i && feedback === "wrong") {
+            style = { background: "oklch(0.65 0.22 25 / 0.15)", border: "1px solid oklch(0.65 0.22 25 / 0.4)", color: "oklch(0.75 0.18 25)" };
+            extraClass = "quiz-wrong";
           } else if (feedback === "correct" && i === question.correctIndex) {
-            className += "border-green-500 bg-green-500/10 text-green-400";
+            style = { background: "oklch(0.72 0.19 145 / 0.1)", border: "1px solid oklch(0.72 0.19 145 / 0.3)", color: "oklch(0.80 0.15 145)" };
           } else {
-            className += "border-border bg-surface text-white hover:border-neutral-600 hover:bg-neutral-800";
+            style = { background: "oklch(0.17 0.01 75)", border: "1px solid oklch(0.24 0.012 75)", color: "oklch(0.90 0.005 75)" };
           }
 
           return (
@@ -106,7 +125,8 @@ export default function QuizCard({
               key={i}
               onClick={() => handleSelect(i)}
               disabled={selected !== null}
-              className={className}
+              className={base + extraClass}
+              style={style}
             >
               {option}
             </button>
@@ -114,24 +134,34 @@ export default function QuizCard({
         })}
       </div>
 
-      {/* Explanation + audio replay on correct answer */}
+      {/* Explanation + word audio on correct */}
       {showExplanation && question.explanation && (
         <div className="mt-4 scene-enter">
-          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
-            <p className="text-sm text-green-400 leading-relaxed mb-3">
+          <div
+            className="rounded-2xl p-4"
+            style={{ background: "oklch(0.72 0.19 145 / 0.08)", border: "1px solid oklch(0.72 0.19 145 / 0.2)" }}
+          >
+            <p className="text-sm leading-relaxed mb-3" style={{ color: "oklch(0.75 0.12 145)" }}>
               {question.explanation}
             </p>
             <div className="flex items-center gap-3">
-              <span className="text-amber font-bold font-display text-lg">
+              <span className="font-bold font-[var(--font-story)] text-lg" style={{ color: "oklch(0.78 0.17 75)" }}>
                 {question.word.word}
               </span>
-              <span className="text-neutral-400 text-sm">= {question.word.translation}</span>
+              <span style={{ color: "oklch(0.50 0.01 75)", fontSize: "0.85rem" }}>
+                = {question.word.translation}
+              </span>
               <button
-                  onClick={playWordAudio}
-                  className="ml-auto px-3 py-1.5 bg-amber/10 border border-amber/30 rounded-lg text-amber text-xs font-semibold hover:bg-amber/20 transition-colors"
-                >
-                  Listen
-                </button>
+                onClick={playWordAudio}
+                className="ml-auto px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                style={{
+                  background: "oklch(0.78 0.17 75 / 0.1)",
+                  border: "1px solid oklch(0.78 0.17 75 / 0.25)",
+                  color: "oklch(0.78 0.17 75)",
+                }}
+              >
+                Listen
+              </button>
             </div>
           </div>
         </div>

@@ -202,7 +202,8 @@ export default function PlayPage() {
                   dispatch({ type: "UNLOCK_AUDIO" });
                   handleTransition();
                 }}
-                className="px-8 py-4 bg-amber text-black rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-amber-400 transition-colors min-h-[48px]"
+                className="px-8 py-4 rounded-xl text-sm font-bold uppercase tracking-widest transition-all min-h-[48px]"
+                style={{ background: "oklch(0.78 0.17 75)", color: "oklch(0.15 0.02 75)" }}
               >
                 Begin
               </button>
@@ -311,29 +312,33 @@ export default function PlayPage() {
               </h2>
 
               {/* Achievement card */}
-              <div className="bg-surface border border-amber/30 rounded-xl p-5 my-4 text-left">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 rounded-full bg-amber/20 flex items-center justify-center text-2xl">
+              <div
+                className="rounded-2xl p-5 my-4 text-left"
+                style={{ background: "oklch(0.17 0.01 75)", border: "1px solid oklch(0.78 0.17 75 / 0.2)" }}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div
+                    className="w-11 h-11 rounded-full flex items-center justify-center text-xl"
+                    style={{ background: "oklch(0.78 0.17 75 / 0.15)" }}
+                  >
                     📖
                   </div>
                   <div>
-                    <p className="text-amber font-bold text-sm">Istanbul Explorer</p>
-                    <p className="text-neutral-500 text-xs">Level Complete</p>
+                    <p className="font-bold text-sm" style={{ color: "oklch(0.78 0.17 75)" }}>Istanbul Explorer</p>
+                    <p style={{ color: "oklch(0.50 0.01 75)", fontSize: "0.7rem" }}>Level Complete</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="bg-dark rounded-lg p-2">
-                    <p className="text-amber font-bold text-lg">{state.learnedWords.length}</p>
-                    <p className="text-neutral-500 text-[10px] uppercase tracking-wide">Words</p>
-                  </div>
-                  <div className="bg-dark rounded-lg p-2">
-                    <p className="text-amber font-bold text-lg">3</p>
-                    <p className="text-neutral-500 text-[10px] uppercase tracking-wide">Stories</p>
-                  </div>
-                  <div className="bg-dark rounded-lg p-2">
-                    <p className="text-amber font-bold text-lg">3</p>
-                    <p className="text-neutral-500 text-[10px] uppercase tracking-wide">Mysteries</p>
-                  </div>
+                  {[
+                    { value: state.learnedWords.filter((w, i, a) => a.findIndex(x => x.id === w.id) === i).length, label: "Words" },
+                    { value: 3, label: "Stories" },
+                    { value: 3, label: "Mysteries" },
+                  ].map((s) => (
+                    <div key={s.label} className="rounded-xl p-2" style={{ background: "oklch(0.12 0.008 75)" }}>
+                      <p className="game-stat">{s.value}</p>
+                      <p style={{ color: "oklch(0.45 0.01 75)", fontSize: "0.6rem", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const, marginTop: "2px" }}>{s.label}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
 

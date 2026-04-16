@@ -1,169 +1,208 @@
 @import "tailwindcss";
 
 @theme {
-  --color-dark: #0F0F0F;
-  --color-surface: #1A1A1A;
-  --color-border: #2A2A2A;
-  --color-amber: #F59E0B;
-  --color-amber-glow: rgba(245, 158, 11, 0.3);
-  --font-display: Georgia, serif;
+  /* OKLCH palette — tinted toward amber (hue 75) */
+  --color-dark: oklch(0.12 0.008 75);
+  --color-surface: oklch(0.17 0.01 75);
+  --color-border: oklch(0.24 0.012 75);
+  --color-amber: oklch(0.78 0.17 75);
+  --color-amber-dim: oklch(0.65 0.14 75);
+  --color-amber-glow: oklch(0.78 0.17 75 / 0.25);
+  --color-text: oklch(0.95 0.005 75);
+  --color-text-muted: oklch(0.60 0.01 75);
+  --color-success: oklch(0.72 0.19 145);
+  --color-error: oklch(0.65 0.22 25);
+
+  /* Fonts */
+  --font-display: "Rubik", system-ui, sans-serif;
+  --font-story: "Vollkorn", Georgia, serif;
+
+  /* Spacing scale (4pt base) */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
 }
 
 html, body {
-  background: #0A0A0A;
-  color: #FAFAFA;
-  font-family: "Inter", system-ui, sans-serif;
+  background: oklch(0.09 0.008 75);
+  color: var(--color-text);
+  font-family: var(--font-display);
   min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Turkish word highlight */
+/* Turkish word — collectible game item feel */
 .turkish-word {
   color: var(--color-amber);
   font-weight: 700;
-  text-shadow: 0 0 8px var(--color-amber-glow);
+  font-family: var(--font-story);
+  text-shadow: 0 0 12px var(--color-amber-glow);
   cursor: help;
   position: relative;
+  display: inline;
+  padding: 0 2px;
+  border-radius: 3px;
+  background: oklch(0.78 0.17 75 / 0.08);
 }
 
 .turkish-word .tooltip {
   position: absolute;
-  bottom: 100%;
+  bottom: calc(100% + 4px);
   left: 50%;
   transform: translateX(-50%);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.7rem;
   font-style: italic;
-  color: #A3A3A3;
+  font-family: var(--font-display);
+  color: var(--color-text-muted);
   white-space: nowrap;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.15s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
 }
 
-.turkish-word:hover .tooltip {
+.turkish-word:hover .tooltip,
+.turkish-word:active .tooltip {
   opacity: 1;
 }
 
-/* Scene transitions */
+/* Exponential easing for all transitions */
 .scene-enter {
-  animation: sceneEnter 0.5s ease-out;
+  animation: sceneEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes sceneEnter {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .scene-fade-out {
-  animation: sceneFadeOut 0.5s ease-in forwards;
+  animation: sceneFadeOut 0.4s cubic-bezier(0.55, 0, 1, 0.45) forwards;
 }
 
 @keyframes sceneFadeOut {
-  to {
-    opacity: 0;
-  }
+  to { opacity: 0; }
 }
 
-/* Quiz feedback */
+/* Quiz feedback — snappy, game-like */
 .quiz-correct {
-  animation: correctFlash 0.4s ease-out;
+  animation: correctPop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes correctFlash {
-  0% { background: #22c55e; transform: scale(1.05); }
-  100% { background: transparent; transform: scale(1); }
+@keyframes correctPop {
+  0% { transform: scale(1.06); box-shadow: 0 0 0 0 oklch(0.72 0.19 145 / 0.4); }
+  100% { transform: scale(1); box-shadow: 0 0 0 8px oklch(0.72 0.19 145 / 0); }
 }
 
 .quiz-wrong {
-  animation: wrongShake 0.4s ease-out;
+  animation: wrongShake 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97);
 }
 
 @keyframes wrongShake {
   0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-8px); }
-  40% { transform: translateX(8px); }
-  60% { transform: translateX(-4px); }
-  80% { transform: translateX(4px); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
 }
 
-/* Confetti */
+/* Confetti — varied shapes */
 .confetti-particle {
   position: absolute;
   width: 6px;
   height: 6px;
-  background: var(--color-amber);
+  border-radius: 1px;
+  animation: confettiFall 3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.confetti-particle:nth-child(odd) {
   border-radius: 50%;
-  animation: confettiFall 3s ease-out forwards;
+  width: 5px;
+  height: 5px;
+}
+
+.confetti-particle:nth-child(3n) {
+  width: 8px;
+  height: 3px;
 }
 
 @keyframes confettiFall {
-  0% {
-    opacity: 1;
-    transform: translateY(0) rotate(0deg);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(400px) rotate(720deg);
-  }
+  0% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(350px) rotate(540deg) scale(0.5); }
 }
 
-/* Glow pulse for words */
+/* Glow pulse — subtler, less aggressive */
 .glow-pulse {
-  animation: glowPulse 2s ease-in-out infinite;
+  animation: glowPulse 2.5s ease-in-out infinite;
 }
 
 @keyframes glowPulse {
   0%, 100% { text-shadow: 0 0 8px var(--color-amber-glow); }
-  50% { text-shadow: 0 0 16px var(--color-amber-glow), 0 0 24px var(--color-amber-glow); }
+  50% { text-shadow: 0 0 14px var(--color-amber-glow), 0 0 20px oklch(0.78 0.10 75 / 0.12); }
 }
 
-/* Audio waveform */
+/* Audio waveform — smoother */
 .waveform-bar {
-  animation: waveform 1.2s ease-in-out infinite;
+  animation: waveform 1.4s ease-in-out infinite;
 }
 
 @keyframes waveform {
-  0%, 100% { height: 4px; }
-  50% { height: 16px; }
+  0%, 100% { height: 3px; }
+  50% { height: 14px; }
 }
 
-/* NPC entrance */
+/* NPC entrance — from the right, game-character-like */
 .npc-enter {
-  animation: npcSlideIn 0.3s ease-out;
+  animation: npcSlideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes npcSlideIn {
-  from {
-    opacity: 0;
-    transform: translateX(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
-/* Vocab word stagger (used in finale) */
+/* Vocab stagger */
 .vocab-word-enter {
-  animation: vocabFadeIn 0.3s ease-out both;
+  animation: vocabFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes vocabFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Game-like label styles */
+.game-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-amber);
+  font-family: var(--font-display);
+}
+
+.game-stat {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-amber);
+  font-family: var(--font-display);
+  line-height: 1;
+}
+
+/* Story text — readable, warm, literary */
+.story-text {
+  font-family: var(--font-story);
+  font-size: 1.05rem;
+  line-height: 1.75;
+  color: var(--color-text);
+  letter-spacing: 0.005em;
 }

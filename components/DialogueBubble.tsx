@@ -39,10 +39,11 @@ export default function DialogueBubble({
       wordMap.set(stripDiacritics(v.word), v);
     }
 
-    return transcript.split(/(\s+)/).map((token) => {
+    return transcript.split(/(\s+|\n)/).map((token) => {
+      if (token === "\n") return { text: "\n", match: undefined, isBreak: true };
       const clean = stripDiacritics(stripPunctuation(token));
       const match = wordMap.get(clean);
-      return { text: token, match };
+      return { text: token, match, isBreak: false };
     });
   }, [transcript, vocabWords]);
 
@@ -57,14 +58,30 @@ export default function DialogueBubble({
         />
       )}
 
-      <div className="text-xs font-semibold text-amber mb-2 tracking-wide uppercase">
-        {npcName}
+      {/* NPC name badge */}
+      <div className="flex items-center gap-2 mb-3">
+        <div
+          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+          style={{ background: "oklch(0.78 0.17 75 / 0.15)", color: "oklch(0.78 0.17 75)" }}
+        >
+          {npcName.charAt(0)}
+        </div>
+        <span className="game-label">{npcName}</span>
       </div>
 
-      <div className="bg-surface border border-border rounded-xl p-4 mb-4">
-        <p className="text-lg leading-relaxed font-display">
+      {/* Story text — literary, scrollable */}
+      <div
+        className="rounded-2xl p-4 mb-4 max-h-[45vh] overflow-y-auto"
+        style={{
+          background: "oklch(0.17 0.01 75)",
+          border: "1px solid oklch(0.24 0.012 75)",
+        }}
+      >
+        <div className="story-text">
           {segments.map((seg, i) =>
-            seg.match ? (
+            seg.isBreak ? (
+              <span key={i} className="block h-3" />
+            ) : seg.match ? (
               <span key={i} className="turkish-word glow-pulse">
                 {seg.text}
                 <span className="tooltip">{seg.match.translation}</span>
@@ -73,9 +90,10 @@ export default function DialogueBubble({
               <span key={i}>{seg.text}</span>
             )
           )}
-        </p>
+        </div>
       </div>
 
+      {/* Actions */}
       <div className="flex items-center gap-3">
         {ttsSrc && (
           <button
@@ -85,15 +103,24 @@ export default function DialogueBubble({
                 audioRef.current.play().catch(() => {});
               }
             }}
-            className="px-4 py-3 border border-amber text-amber rounded-lg text-sm font-semibold uppercase tracking-wide hover:bg-amber/10 transition-colors min-h-[48px]"
+            className="px-4 py-3 rounded-xl text-sm font-semibold transition-all min-h-[48px]"
+            style={{
+              border: "1px solid oklch(0.78 0.17 75 / 0.3)",
+              color: "oklch(0.78 0.17 75)",
+              background: "oklch(0.78 0.17 75 / 0.05)",
+            }}
           >
-            {audioPlaying ? "Playing..." : audioError ? "Audio N/A" : "Replay"}
+            {audioPlaying ? "Playing..." : audioError ? "N/A" : "Replay"}
           </button>
         )}
 
         <button
           onClick={onContinue}
-          className="flex-1 px-4 py-3 bg-amber text-black rounded-lg text-sm font-semibold uppercase tracking-wide hover:bg-amber-400 transition-colors min-h-[48px]"
+          className="flex-1 px-4 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all min-h-[48px]"
+          style={{
+            background: "oklch(0.78 0.17 75)",
+            color: "oklch(0.15 0.02 75)",
+          }}
         >
           Continue
         </button>

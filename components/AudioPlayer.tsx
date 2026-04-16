@@ -39,7 +39,7 @@ export default function AudioPlayer({
     };
 
     if (sfxSrc) playAudio(sfx, 0.5);
-    if (musicSrc) playAudio(music, 0.3);
+    if (musicSrc) playAudio(music, 0.25);
 
     return () => {
       sfx?.pause();
@@ -49,8 +49,12 @@ export default function AudioPlayer({
 
   return (
     <div
-      className="sticky bottom-0 bg-surface border-t border-border px-4 py-3 flex items-center gap-3"
-      style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
+      className="sticky bottom-0 px-4 py-3 flex items-center gap-3"
+      style={{
+        background: "oklch(0.14 0.01 75)",
+        borderTop: "1px solid oklch(0.22 0.01 75)",
+        paddingBottom: "max(12px, env(safe-area-inset-bottom))",
+      }}
     >
       {sfxSrc && <audio ref={sfxRef} src={sfxSrc} preload="metadata" />}
       {musicSrc && <audio ref={musicRef} src={musicSrc} preload="metadata" />}
@@ -60,19 +64,21 @@ export default function AudioPlayer({
           [1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="w-0.5 bg-amber rounded-full waveform-bar"
-              style={{ animationDelay: `${i * 0.15}s` }}
+              className="w-0.5 rounded-full waveform-bar"
+              style={{ background: "oklch(0.78 0.17 75)", animationDelay: `${i * 0.15}s` }}
             />
           ))}
         {!playing && !error && (
-          <span className="text-xs text-neutral-400">Loading...</span>
+          <span style={{ color: "oklch(0.45 0.01 75)", fontSize: "0.7rem" }}>Loading...</span>
         )}
         {error && (
-          <span className="text-xs text-neutral-400">Audio unavailable</span>
+          <span style={{ color: "oklch(0.45 0.01 75)", fontSize: "0.7rem" }}>Audio unavailable</span>
         )}
       </div>
 
-      <span className="text-xs text-neutral-400 flex-1 truncate">{label}</span>
+      <span className="flex-1 truncate" style={{ color: "oklch(0.50 0.01 75)", fontSize: "0.7rem", fontWeight: 500 }}>
+        {label}
+      </span>
     </div>
   );
 }
