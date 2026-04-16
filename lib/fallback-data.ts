@@ -12,25 +12,24 @@ export const FALLBACK_CITY: CityData = {
 
 export const FALLBACK_VOCAB: VocabWord[] = [
   { id: "merhaba", word: "merhaba", translation: "hello", difficulty: 1, category: "greeting", city: "istanbul", scene: 2 },
+  { id: "cami", word: "cami", translation: "mosque", difficulty: 1, category: "culture", city: "istanbul", scene: 2 },
   { id: "sola", word: "sola", translation: "left", difficulty: 1, category: "direction", city: "istanbul", scene: 2 },
   { id: "duz", word: "düz", translation: "straight", difficulty: 1, category: "direction", city: "istanbul", scene: 2 },
+  { id: "cay", word: "çay", translation: "tea", difficulty: 1, category: "food", city: "istanbul", scene: 2 },
+  { id: "yil", word: "yıl", translation: "year", difficulty: 1, category: "time", city: "istanbul", scene: 2 },
   { id: "kolay", word: "kolay", translation: "easy", difficulty: 1, category: "adjective", city: "istanbul", scene: 2 },
   { id: "hos-geldiniz", word: "hoş geldiniz", translation: "welcome", difficulty: 2, category: "greeting", city: "istanbul", scene: 3 },
-  { id: "cay", word: "çay", translation: "tea", difficulty: 2, category: "food", city: "istanbul", scene: 3 },
+  { id: "bu", word: "bu", translation: "this", difficulty: 2, category: "pronoun", city: "istanbul", scene: 3 },
   { id: "bes", word: "beş", translation: "five", difficulty: 2, category: "number", city: "istanbul", scene: 3 },
   { id: "cok-guzel", word: "çok güzel", translation: "very beautiful", difficulty: 2, category: "adjective", city: "istanbul", scene: 3 },
-  { id: "bu", word: "bu", translation: "this", difficulty: 3, category: "pronoun", city: "istanbul", scene: 4 },
-  { id: "cami", word: "cami", translation: "mosque", difficulty: 3, category: "culture", city: "istanbul", scene: 4 },
   { id: "eski", word: "eski", translation: "old", difficulty: 3, category: "adjective", city: "istanbul", scene: 4 },
   { id: "dort-yuz", word: "dört yüz", translation: "four hundred", difficulty: 3, category: "number", city: "istanbul", scene: 4 },
-  { id: "yil", word: "yıl", translation: "year", difficulty: 3, category: "time", city: "istanbul", scene: 4 },
   { id: "kitapci", word: "kitapçı", translation: "bookshop", difficulty: 3, category: "place", city: "istanbul", scene: 4 },
   { id: "ariyorsunuz", word: "arıyorsunuz", translation: "you search", difficulty: 3, category: "verb", city: "istanbul", scene: 4 },
 ];
 
 export interface StoryQuizQuestion {
   question: string;
-  questionAudio?: string;
   correctAnswer: string;
   wrongAnswers: string[];
   vocabWord: VocabWord;
@@ -45,6 +44,8 @@ export interface SceneStory {
   quizQuestions: StoryQuizQuestion[];
 }
 
+const V = (id: string) => FALLBACK_VOCAB.find((v) => v.id === id)!;
+
 export const SCENE_STORIES: Record<number, SceneStory> = {
   2: {
     dialogue: {
@@ -55,42 +56,41 @@ export const SCENE_STORIES: Record<number, SceneStory> = {
       npcName: "Taxi Driver",
       situation: "Asking for directions in a taxi near the airport",
       transcript:
-        "Merhaba! Where you go? Ah, Sultanahmet! Let me tell you something about this road. You see, Sultan Ahmed I, he was only 14 years old when he became sultan. Fourteen! And the first thing he wanted? A mosque so beautiful the whole world would remember it. Every morning, thousands of workers would walk this very road, turning sola, left, then going düz, straight, to the construction site. The sultan himself would visit to check progress. And you know what kept them all going? Çay. Tea. Cups and cups of tea, shared between workers and their sultan on the cold mornings. They built for seven yıl, seven years, and people called it the Blue Mosque because of the tiles. Kolay! Easy to find — just follow this road, you'll see the minarets. One mystery though... the mosque has six minarets, but most have only four. No one knows for sure why Ahmed wanted six. Some say the architect misheard the order...",
-      vocabIds: ["merhaba", "sola", "duz", "kolay"],
+        "Merhaba, friend! Welcome to Istanbul. You going to Sultanahmet? Good, good. Let me tell you something about this road.\n\nYou see, Sultan Ahmed the First... he was only fourteen years old when he became sultan. Fourteen! And the first thing he wanted? A cami so beautiful the whole world would remember it. A mosque like no other.\n\nEvery morning, thousands of workers would walk this very road. They would turn sola, to the left, right here where we are turning now. Then go düz, straight ahead, all the way to the construction site.\n\nAnd you know what kept them all going through those cold Istanbul mornings? Çay. Tea. The sultan himself would sit with the workers and share çay with them. Can you imagine? A sultan, drinking tea with builders.\n\nThey worked for seven yıl. Seven years. And when it was finished, people called it the Blue Mosque because of twenty thousand blue tiles inside. Kolay to find, easy! Just follow this road, you will see six minarets touching the sky.\n\nBut here is something strange... most mosques have four minarets. This one has six. Nobody knows exactly why Ahmed wanted six. Some say the architect misheard the sultan's order...",
+      vocabIds: ["merhaba", "cami", "sola", "duz", "cay", "yil", "kolay"],
     },
-    story:
-      "Sultan Ahmed I became sultan at age 14 and immediately ordered the construction of what would become the Blue Mosque. Workers walked this road every day, turning left toward the site, drinking tea together with the sultan himself on cold mornings. After seven years, it was complete — and unlike any mosque before it, it had six minarets.",
+    story: "Sultan Ahmed I became sultan at age 14 and ordered the construction of what would become the Blue Mosque. Workers walked this road every day, turning left toward the site, drinking tea with the sultan on cold mornings. After seven years, it was complete with twenty thousand blue tiles and six minarets.",
     mystery: "Why does the Blue Mosque have six minarets when most mosques have only four?",
     mysteryReveal:
-      "Legend says Sultan Ahmed ordered an 'altın' (golden) minaret, but the architect heard 'altı' (six). Instead of admitting the mistake, he built six — making it the only mosque in Istanbul with that many. A single misheard word changed architecture forever.",
+      "Legend says Sultan Ahmed ordered an 'altın' (golden) minaret, but the architect heard 'altı' (six). Instead of admitting the mistake, he built all six. A single misheard Turkish word changed architecture forever.",
     quizQuestions: [
       {
-        question: "How did Sultan Ahmed greet the workers each morning?",
+        question: "How did Sultan Ahmed greet the workers each morning at the construction site?",
         correctAnswer: "merhaba — hello",
         wrongAnswers: ["güle güle — goodbye", "hayır — no"],
-        vocabWord: FALLBACK_VOCAB[0],
-        explanation: "Merhaba means hello. The sultan greeted his workers every morning at the construction site.",
+        vocabWord: V("merhaba"),
+        explanation: "Merhaba means hello. The young sultan greeted his workers personally every morning.",
       },
       {
-        question: "Which direction did workers turn to reach the mosque?",
+        question: "Which direction did the workers turn on this road to reach the mosque?",
         correctAnswer: "sola — left",
         wrongAnswers: ["sağa — right", "geri — back"],
-        vocabWord: FALLBACK_VOCAB[1],
-        explanation: "Sola means left. Workers turned left on this road to reach the Blue Mosque construction site.",
+        vocabWord: V("sola"),
+        explanation: "Sola means left. Workers turned left on this very road to reach the Blue Mosque site.",
       },
       {
-        question: "What did the sultan and workers share on cold mornings?",
+        question: "What did the sultan share with his builders on cold mornings?",
         correctAnswer: "çay — tea",
         wrongAnswers: ["su — water", "süt — milk"],
-        vocabWord: FALLBACK_VOCAB.find((v) => v.id === "cay")!,
-        explanation: "Çay means tea. Turkish tea culture is central to daily life — even a sultan drank it with his workers.",
+        vocabWord: V("cay"),
+        explanation: "Çay means tea. A sultan drinking tea with his builders — that's Turkish tea culture.",
       },
       {
-        question: "How long did it take to build the Blue Mosque?",
+        question: "How many years did it take to build the Blue Mosque?",
         correctAnswer: "yedi yıl — seven years",
         wrongAnswers: ["üç yıl — three years", "on yıl — ten years"],
-        vocabWord: FALLBACK_VOCAB.find((v) => v.id === "yil")!,
-        explanation: "Yıl means year. The Blue Mosque took seven years to complete, from 1609 to 1616.",
+        vocabWord: V("yil"),
+        explanation: "Yıl means year. The Blue Mosque took seven years: 1609 to 1616.",
       },
     ],
   },
@@ -104,42 +104,41 @@ export const SCENE_STORIES: Record<number, SceneStory> = {
       npcName: "Market Vendor",
       situation: "Bargaining at the Grand Bazaar over tea and carpets",
       transcript:
-        "Hoş geldiniz! Welcome to the Grand Bazaar! You know, bu, this place, it's one of the oldest covered markets in the world. Beş yüz yıl, five hundred years old! In 1461, Sultan Mehmed the Conqueror built it right after taking Constantinople. He wanted a place where the whole world could trade. Silk from China, spices from India, carpets from Persia — all here! See these carpets? Çok güzel, very beautiful. Each one takes a family beş, five months to weave by hand. The colors come from natural dyes — pomegranate for red, indigo for blue. And after all that work, we sit and drink çay, tea, together before any price is discussed. That's the rule — çay first, business second. Bu, this tradition, nobody breaks it. Even Mehmed himself would share çay with merchants before collecting taxes...",
-      vocabIds: ["hos-geldiniz", "cay", "bes", "cok-guzel"],
+        "Hoş geldiniz! Welcome, welcome to the Grand Bazaar!\n\nYou know what this place is? Bu... this is one of the oldest covered markets in the whole world. Beş yüz yıl. Five hundred years old! In 1461, Sultan Mehmed the Conqueror built it. He had just taken Constantinople, and he wanted one thing: a place where the whole world could come and trade. Silk from China, spices from India, carpets from Persia, all under one roof.\n\nLook at these carpets. Çok güzel, very beautiful, yes? But beauty takes time. Each carpet takes a whole family beş ay, five months, to weave by hand. The red comes from pomegranate, the blue from indigo, the yellow from saffron. No chemicals, no machines. Just hands and time.\n\nAnd here is the rule of the bazaar. Before any price, before any business... first we drink çay. Tea. Always. Çay first, money second. Bu gelenek, this tradition, nobody breaks. Even Mehmed himself, the Conqueror of Constantinople, would sit with his merchants and share çay before collecting a single coin.\n\nFive hundred years, and we still do the same thing. Would you like some çay?",
+      vocabIds: ["hos-geldiniz", "bu", "bes", "cok-guzel", "cay"],
     },
-    story:
-      "The Grand Bazaar was built in 1461 by Sultan Mehmed the Conqueror, making it one of the oldest covered markets in the world. It was designed as a meeting point for traders from across the known world. Each handwoven carpet takes five months of work, and the tradition of sharing tea before any business negotiation has survived over five centuries.",
-    mystery: "The Grand Bazaar has 61 streets and over 4,000 shops. But there's a secret room that almost no one visits. What is it?",
+    story: "The Grand Bazaar was built in 1461 by Sultan Mehmed the Conqueror as a place where the whole world could trade. Each handwoven carpet takes five months. The tradition of tea before business has survived over five centuries.",
+    mystery: "The Grand Bazaar has 61 streets and over 4,000 shops. But there's a secret room almost no one visits. What is it?",
     mysteryReveal:
-      "Deep inside the bazaar, there's a tiny cami, a mosque, hidden between shops — Sandal Bedesteni. It was Mehmed's personal prayer room. He'd slip away from the traders, pray quietly, then return to bargaining. The world's busiest market hides the world's most peaceful room.",
+      "Deep inside the bazaar, hidden between shops, there's a tiny cami, a mosque called Sandal Bedesteni. It was Mehmed's personal prayer room. He'd slip away from the traders, pray quietly, then return to bargaining. The world's busiest market hides the world's most peaceful room.",
     quizQuestions: [
       {
-        question: "How does the vendor welcome you to the bazaar?",
+        question: "How does the vendor welcome you into the bazaar?",
         correctAnswer: "hoş geldiniz — welcome",
         wrongAnswers: ["merhaba — hello", "nasılsınız — how are you"],
-        vocabWord: FALLBACK_VOCAB.find((v) => v.id === "hos-geldiniz")!,
-        explanation: "Hoş geldiniz means welcome. It's the traditional greeting when someone enters your shop or home.",
+        vocabWord: V("hos-geldiniz"),
+        explanation: "Hoş geldiniz means welcome. The traditional greeting when someone enters your shop or home.",
       },
       {
-        question: "What must happen before any business is discussed?",
-        correctAnswer: "çay — tea",
-        wrongAnswers: ["para — money", "selam — greeting"],
-        vocabWord: FALLBACK_VOCAB.find((v) => v.id === "cay")!,
-        explanation: "Çay (tea) first, business second — this tradition is sacred in Turkish bazaar culture.",
+        question: "What must happen before any business in the bazaar?",
+        correctAnswer: "çay — tea first",
+        wrongAnswers: ["para — money first", "selam — greeting first"],
+        vocabWord: V("cay"),
+        explanation: "Çay first, business second. This 500-year-old tradition is sacred in Turkish bazaar culture.",
       },
       {
-        question: "How many months does it take to weave one carpet?",
-        correctAnswer: "beş — five",
-        wrongAnswers: ["üç — three", "on — ten"],
-        vocabWord: FALLBACK_VOCAB.find((v) => v.id === "bes")!,
-        explanation: "Beş means five. A family spends five months weaving a single carpet by hand.",
+        question: "How long does one family spend weaving a single carpet?",
+        correctAnswer: "beş ay — five months",
+        wrongAnswers: ["üç ay — three months", "on ay — ten months"],
+        vocabWord: V("bes"),
+        explanation: "Beş means five. One family, five months, one carpet. Dyes from pomegranate, indigo, saffron.",
       },
       {
-        question: "How does the vendor describe the carpets?",
+        question: "How does the vendor describe her carpets?",
         correctAnswer: "çok güzel — very beautiful",
         wrongAnswers: ["çok pahalı — very expensive", "çok büyük — very big"],
-        vocabWord: FALLBACK_VOCAB.find((v) => v.id === "cok-guzel")!,
-        explanation: "Çok güzel means very beautiful — the phrase you'll hear most in any Turkish bazaar.",
+        vocabWord: V("cok-guzel"),
+        explanation: "Çok güzel means very beautiful. The phrase you'll hear most in any Turkish bazaar.",
       },
     ],
   },
@@ -153,41 +152,40 @@ export const SCENE_STORIES: Record<number, SceneStory> = {
       npcName: "Old Historian",
       situation: "Conversation with an elderly historian near a mosque courtyard",
       transcript:
-        "Bu cami, this mosque, çok eski, very old. Dört yüz yıl, four hundred years. But I want to tell you something most tourists never learn. There was a man named Matrakçı Nasuh. He was the greatest artist of the Ottoman Empire, and he painted bu, this very skyline you see now, in the year 1530. Every cami, every minaret, every street — he drew them all from memory after walking through the city. He was also a mathematician, a swordsman, and an inventor. They called him a 'Renaissance man' before the Europeans invented the word. His maps are still in the Topkapı Palace, and if you look carefully, he marked a small kitapçı, a bookshop, right here in Sultanahmet. Some say it still exists. Arıyorsunuz? You search for it? Maybe you're closer than you think...",
+        "Ah... you came. Good. Sit with me here, in the shadow of bu cami. This mosque. It is çok eski, very old. Dört yüz yıl. Four hundred years.\n\nBut I did not ask you here to talk about mosques. I want to tell you about a man. His name was Matrakçı Nasuh. You have never heard of him. Almost nobody has. And that is a crime.\n\nMatrakçı was the greatest artist of the Ottoman Empire. In the year 1530, he painted bu, this very skyline you see right now. Every cami, every minaret, every narrow street, he drew them all. From memory. He walked through Istanbul for weeks, memorized everything, then painted it all on a single scroll.\n\nBut here is what makes him eski in the best sense, old but timeless. He was not only a painter. He was a mathematician who invented new ways to calculate. A swordsman who created his own fighting style. An inventor. They called him a Renaissance man before Europe even had the word.\n\nHis maps are still in Topkapı Palace today. And if you look very carefully at his map of Sultanahmet... he marked a small kitapçı. A bookshop. Right here. In this neighborhood.\n\nArıyorsunuz, yes? You search for it? Maybe... maybe you are closer than you think.",
       vocabIds: ["bu", "cami", "eski", "dort-yuz", "yil", "kitapci", "ariyorsunuz"],
     },
-    story:
-      "Matrakçı Nasuh was the Ottoman Empire's greatest polymath — painter, mathematician, swordsman, inventor. In 1530, he painted the Istanbul skyline from memory, marking every mosque, minaret, and street with astonishing accuracy. His maps, still preserved in Topkapı Palace, contain details that surprise historians even today.",
-    mystery: "Matrakçı marked a small bookshop on his 1530 map of Sultanahmet. Does it still exist?",
+    story: "Matrakçı Nasuh was the Ottoman Empire's greatest polymath. In 1530, he painted the Istanbul skyline from memory, marking every mosque, minaret, and street. His maps in Topkapı Palace contain details that surprise historians today.",
+    mystery: "Matrakçı marked a small bookshop on his 1530 map of Sultanahmet. Could it still exist, nearly 500 years later?",
     mysteryReveal:
-      "No one knows for certain. But in 1997, during restoration work on an eski (old) building in Sultanahmet, workers found a hidden basement room filled with shelves carved into stone walls — exactly where Matrakçı's map showed a kitapçı. The room had been sealed for centuries. Some books were still inside, preserved by the cool, dry stone. You might be standing on top of it right now.",
+      "In 1997, during restoration of an eski building in Sultanahmet, workers found a hidden basement room. Stone walls with shelves carved into them, exactly where Matrakçı's map showed a kitapçı. The room had been sealed for centuries. Some books were still inside, preserved by the cool stone. You might be standing on top of it right now.",
     quizQuestions: [
       {
         question: "What did Matrakçı Nasuh paint from memory in 1530?",
-        correctAnswer: "bu cami — this mosque (and the whole skyline)",
+        correctAnswer: "bu cami — this mosque and the skyline",
         wrongAnswers: ["bu kitap — this book", "bu deniz — this sea"],
-        vocabWord: FALLBACK_VOCAB.find((v) => v.id === "cami")!,
+        vocabWord: V("cami"),
         explanation: "Cami means mosque. Matrakçı painted every cami in Istanbul's skyline from memory alone.",
       },
       {
         question: "How old is the mosque the historian describes?",
         correctAnswer: "dört yüz yıl — four hundred years",
         wrongAnswers: ["yüz yıl — one hundred years", "bin yıl — one thousand years"],
-        vocabWord: FALLBACK_VOCAB.find((v) => v.id === "dort-yuz")!,
+        vocabWord: V("dort-yuz"),
         explanation: "Dört yüz means four hundred. Many Ottoman mosques in Istanbul are over 400 years old.",
       },
       {
         question: "What did Matrakçı mark on his map of Sultanahmet?",
         correctAnswer: "kitapçı — bookshop",
         wrongAnswers: ["hastane — hospital", "saray — palace"],
-        vocabWord: FALLBACK_VOCAB.find((v) => v.id === "kitapci")!,
-        explanation: "Kitapçı means bookshop — and this is the one you've been searching for all along.",
+        vocabWord: V("kitapci"),
+        explanation: "Kitapçı means bookshop. This is the one you've been searching for all along.",
       },
       {
         question: "What is the historian asking you at the end?",
         correctAnswer: "arıyorsunuz — you search",
         wrongAnswers: ["biliyorsunuz — you know", "seviyorsunuz — you love"],
-        vocabWord: FALLBACK_VOCAB.find((v) => v.id === "ariyorsunuz")!,
+        vocabWord: V("ariyorsunuz"),
         explanation: "Arıyorsunuz means 'you search.' The historian knows what you're looking for.",
       },
     ],

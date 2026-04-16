@@ -182,13 +182,6 @@ export default function PlayPage() {
       : "SCENE_4_HISTORIAN"
     : scene;
 
-  // Determine TTS source for quiz audio replay
-  const quizTtsSrc = isQuizScene(scene)
-    ? scene === "QUIZ_1" ? "/audio/tts/taxi-driver.mp3"
-      : scene === "QUIZ_2" ? "/audio/tts/vendor.mp3"
-      : "/audio/tts/historian.mp3"
-    : undefined;
-
   return (
     <div className={`min-h-dvh flex flex-col ${transitioning ? "scene-fade-out" : "scene-enter"}`}>
       <ProgressBar scene={scene} />
@@ -256,7 +249,6 @@ export default function PlayPage() {
                   questionNumber={state.quizIndex + 1}
                   totalQuestions={state.currentQuiz.length}
                   onAnswer={handleQuizAnswer}
-                  ttsSrc={quizTtsSrc}
                 />
               ) : (
                 <div className="flex items-center justify-center pt-20">

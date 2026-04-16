@@ -7,11 +7,31 @@ export default function Home() {
   const router = useRouter();
   const [phase, setPhase] = useState<"intro" | "mission" | "ready">("intro");
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const musicRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     const t1 = setTimeout(() => setPhase("mission"), 2000);
     const t2 = setTimeout(() => setPhase("ready"), 5000);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+
+    // Try to play music on any user interaction (autoplay policy)
+    const tryPlay = () => {
+      if (musicRef.current && musicRef.current.paused) {
+        musicRef.current.volume = 0.2;
+        musicRef.current.loop = true;
+        musicRef.current.play().catch(() => {});
+      }
+    };
+    document.addEventListener("click", tryPlay, { once: true });
+    document.addEventListener("mousemove", tryPlay, { once: true });
+    document.addEventListener("touchstart", tryPlay, { once: true });
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      document.removeEventListener("click", tryPlay);
+      document.removeEventListener("mousemove", tryPlay);
+      document.removeEventListener("touchstart", tryPlay);
+    };
   }, []);
 
   const handleBegin = () => {
@@ -25,6 +45,7 @@ export default function Home() {
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center px-6 text-center relative overflow-hidden">
       <audio ref={audioRef} src="/audio/sfx/istanbul-arrival.mp3" preload="metadata" />
+      <audio ref={musicRef} src="/audio/music/istanbul-ambient.mp3" preload="metadata" />
 
       {/* Background gradient */}
       <div

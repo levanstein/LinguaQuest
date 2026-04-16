@@ -8,7 +8,6 @@ interface QuizCardProps {
   questionNumber: number;
   totalQuestions: number;
   onAnswer: (selectedIndex: number) => void;
-  ttsSrc?: string;
 }
 
 export default function QuizCard({
@@ -16,8 +15,8 @@ export default function QuizCard({
   questionNumber,
   totalQuestions,
   onAnswer,
-  ttsSrc,
 }: QuizCardProps) {
+  const wordAudioSrc = `/audio/words/${question.word.id}.mp3`;
   const [selected, setSelected] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -49,7 +48,7 @@ export default function QuizCard({
   };
 
   const playWordAudio = () => {
-    if (ttsSrc && wordAudioRef.current) {
+    if (wordAudioRef.current) {
       wordAudioRef.current.currentTime = 0;
       wordAudioRef.current.play().catch(() => {});
     }
@@ -59,7 +58,7 @@ export default function QuizCard({
 
   return (
     <div className="scene-enter px-4">
-      {ttsSrc && <audio ref={wordAudioRef} src={ttsSrc} preload="metadata" />}
+      <audio ref={wordAudioRef} src={wordAudioSrc} preload="metadata" />
 
       {/* Question header */}
       <div className="text-center mb-4">
@@ -127,14 +126,12 @@ export default function QuizCard({
                 {question.word.word}
               </span>
               <span className="text-neutral-400 text-sm">= {question.word.translation}</span>
-              {ttsSrc && (
-                <button
+              <button
                   onClick={playWordAudio}
                   className="ml-auto px-3 py-1.5 bg-amber/10 border border-amber/30 rounded-lg text-amber text-xs font-semibold hover:bg-amber/20 transition-colors"
                 >
                   Listen
                 </button>
-              )}
             </div>
           </div>
         </div>
