@@ -6,6 +6,7 @@ import AudioPlayer from "@/components/AudioPlayer";
 import DialogueBubble from "@/components/DialogueBubble";
 import QuizCard from "@/components/QuizCard";
 import VocabSummary from "@/components/VocabSummary";
+import SceneIllustration from "@/components/SceneIllustration";
 import {
   createInitialState,
   gameReducer,
@@ -30,14 +31,11 @@ export default function PlayPage() {
   const scene = state.currentScene;
   const config = SCENE_CONFIGS[scene];
 
-  // Clear all timers on unmount
   useEffect(() => {
-    return () => {
-      transitionTimers.current.forEach(clearTimeout);
-    };
+    return () => { transitionTimers.current.forEach(clearTimeout); };
   }, []);
 
-  // Fetch dialogue and vocab for current scene
+  // Fetch dialogue and vocab for dialogue scenes
   useEffect(() => {
     if (!isDialogueScene(scene)) return;
 
@@ -63,9 +61,9 @@ export default function PlayPage() {
     return () => controller.abort();
   }, [scene, config?.sceneNumber]);
 
-  // Generate quiz when entering a quiz scene
+  // Generate quiz when entering quiz scene — uses vocab from previous dialogue
   useEffect(() => {
-    if (isQuizScene(scene) && !quizGenerated.current) {
+    if (isQuizScene(scene) && !quizGenerated.current && sceneVocab.length > 0) {
       quizGenerated.current = true;
       const quiz = generateQuiz(sceneVocab, state.learnedWords);
       dispatch({ type: "SET_QUIZ", quiz });
@@ -81,12 +79,13 @@ export default function PlayPage() {
     return id;
   }, []);
 
+  // BUG FIX: Don't clear sceneVocab on transition. Quiz needs it.
+  // Only clear dialogue (new dialogue scenes will fetch fresh data anyway).
   const handleTransition = useCallback(() => {
     setTransitioning(true);
     scheduleTimer(() => {
       dispatch({ type: "ADVANCE_SCENE" });
       setDialogue(null);
-      setSceneVocab([]);
       setTransitioning(false);
     }, 500);
   }, [scheduleTimer]);
@@ -95,7 +94,7 @@ export default function PlayPage() {
     dispatch({ type: "ANSWER_QUIZ", selectedIndex });
   }, []);
 
-  // Check if quiz is complete after state update
+  // Check if quiz is complete
   useEffect(() => {
     if (!isQuizScene(scene) || state.currentQuiz.length === 0) return;
     if (!isQuizComplete(state)) return;
@@ -106,6 +105,8 @@ export default function PlayPage() {
       setTransitioning(true);
       scheduleTimer(() => {
         dispatch({ type: "COMPLETE_QUIZ" });
+        // Clear vocab after quiz completes — next dialogue scene will fetch fresh
+        setSceneVocab([]);
         setTransitioning(false);
       }, 500);
     }, 1500);
@@ -142,6 +143,13 @@ export default function PlayPage() {
     state.currentQuiz.length > 0 &&
     state.quizIndex < state.currentQuiz.length;
 
+  // Determine illustration scene (quiz shows parent dialogue scene's illustration)
+  const illustrationScene = isQuizScene(scene)
+    ? scene === "QUIZ_1" ? "SCENE_2_TAXI"
+      : scene === "QUIZ_2" ? "SCENE_3_MARKET"
+      : "SCENE_4_HISTORIAN"
+    : scene;
+
   return (
     <div className={`min-h-dvh flex flex-col ${transitioning ? "scene-fade-out" : "scene-enter"}`}>
       <ProgressBar scene={scene} />
@@ -149,17 +157,13 @@ export default function PlayPage() {
       <div className="flex-1 flex flex-col">
         {/* Arrival */}
         {scene === "SCENE_1_ARRIVAL" && (
-          <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-            <div
-              className="absolute inset-0 opacity-30"
-              style={{
-                background: "linear-gradient(180deg, transparent 30%, #2d1d0a 60%, #1a1205 80%, transparent 100%)",
-              }}
-            />
+          <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
+            <SceneIllustration scene="SCENE_1_ARRIVAL" />
             <div className="relative z-10">
-              <h2 className="text-3xl font-bold text-amber mb-4 font-display">Istanbul</h2>
-              <p className="text-white text-lg leading-relaxed mb-8 max-w-[320px] font-display">
-                You just landed in Istanbul. Find the hidden bookshop in Sultanahmet before sunset.
+              <h2 className="text-3xl font-bold text-amber mb-2 font-display">Istanbul</h2>
+              <p className="text-neutral-400 text-sm mb-4">The sun is low. You have until sunset.</p>
+              <p className="text-white text-base leading-relaxed mb-6 max-w-[320px] font-display">
+                Find the hidden bookshop in Sultanahmet. Talk to the locals, learn their language, follow the clues.
               </p>
               <button
                 onClick={() => {
@@ -176,14 +180,19 @@ export default function PlayPage() {
 
         {/* Dialogue scenes */}
         {isDialogueScene(scene) && dialogue && (
-          <DialogueBubble
-            npcName={dialogue.npcName}
-            transcript={dialogue.transcript}
-            vocabWords={sceneVocab}
-            ttsSrc={config?.tts}
-            audioUnlocked={state.audioUnlocked}
-            onContinue={handleTransition}
-          />
+          <div className="flex flex-col">
+            <div className="px-4 pt-3">
+              <SceneIllustration scene={scene} />
+            </div>
+            <DialogueBubble
+              npcName={dialogue.npcName}
+              transcript={dialogue.transcript}
+              vocabWords={sceneVocab}
+              ttsSrc={config?.tts}
+              audioUnlocked={state.audioUnlocked}
+              onContinue={handleTransition}
+            />
+          </div>
         )}
 
         {isDialogueScene(scene) && !dialogue && (
@@ -192,24 +201,30 @@ export default function PlayPage() {
           </div>
         )}
 
-        {/* Quiz scenes */}
-        {showQuiz && (
+        {/* Quiz scenes — overlay on scene illustration */}
+        {(showQuiz || (isQuizScene(scene) && !overlay)) && (
           <div className="flex-1 relative">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="relative z-10 py-6">
-              <QuizCard
-                question={state.currentQuiz[state.quizIndex]}
-                questionNumber={state.quizIndex + 1}
-                totalQuestions={state.currentQuiz.length}
-                onAnswer={handleQuizAnswer}
-              />
+            {/* Scene illustration dimmed behind */}
+            <div className="absolute inset-0 opacity-20">
+              <div className="px-4 pt-3">
+                <SceneIllustration scene={illustrationScene} />
+              </div>
             </div>
-          </div>
-        )}
-
-        {isQuizScene(scene) && !showQuiz && !overlay && (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-neutral-400 text-sm animate-pulse">Preparing quiz...</div>
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+            <div className="relative z-10 py-6">
+              {showQuiz ? (
+                <QuizCard
+                  question={state.currentQuiz[state.quizIndex]}
+                  questionNumber={state.quizIndex + 1}
+                  totalQuestions={state.currentQuiz.length}
+                  onAnswer={handleQuizAnswer}
+                />
+              ) : (
+                <div className="flex-1 flex items-center justify-center pt-20">
+                  <div className="text-neutral-400 text-sm animate-pulse">Preparing quiz...</div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -222,7 +237,7 @@ export default function PlayPage() {
 
         {/* Finale */}
         {isFinale(scene) && (
-          <div className="flex-1 flex flex-col items-center justify-center px-6 text-center relative">
+          <div className="flex-1 flex flex-col items-center justify-center px-4 text-center relative">
             {showConfetti &&
               confettiParticles.map((p, i) => (
                 <div
@@ -239,12 +254,18 @@ export default function PlayPage() {
               ))}
 
             <div className="relative z-10">
+              <SceneIllustration scene="SCENE_5_FINALE" />
               <h2 className="text-3xl font-bold text-amber mb-3 scene-enter font-display">
                 You found the bookshop!
               </h2>
               <VocabSummary words={state.learnedWords} />
               <button
-                onClick={() => dispatch({ type: "RESET" })}
+                onClick={() => {
+                  dispatch({ type: "RESET" });
+                  setSceneVocab([]);
+                  setDialogue(null);
+                  setShowConfetti(false);
+                }}
                 className="mt-6 px-6 py-3 border border-amber text-amber rounded-lg text-sm font-semibold uppercase tracking-wide hover:bg-amber/10 transition-colors min-h-[48px]"
               >
                 Play Again
