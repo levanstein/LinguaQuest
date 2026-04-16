@@ -47,6 +47,9 @@ export default function AudioPlayer({
     };
   }, [sfxSrc, musicSrc, audioUnlocked]);
 
+  // Hide entirely if audio failed and nothing is playing
+  if (error && !playing) return null;
+
   return (
     <div
       className="sticky bottom-0 px-4 py-3 flex items-center gap-3"
@@ -71,13 +74,10 @@ export default function AudioPlayer({
         {!playing && !error && (
           <span style={{ color: "oklch(0.45 0.01 75)", fontSize: "0.7rem" }}>Loading...</span>
         )}
-        {error && (
-          <span style={{ color: "oklch(0.45 0.01 75)", fontSize: "0.7rem" }}>Audio unavailable</span>
-        )}
       </div>
 
       <span className="flex-1 truncate" style={{ color: "oklch(0.50 0.01 75)", fontSize: "0.7rem", fontWeight: 500 }}>
-        {label}
+        {playing ? `Listening · ${label}` : label}
       </span>
     </div>
   );

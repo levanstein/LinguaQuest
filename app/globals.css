@@ -134,6 +134,20 @@ html, body {
   height: 3px;
 }
 
+.confetti-particle:nth-child(5n) {
+  width: 4px;
+  height: 8px;
+  border-radius: 0;
+  transform-origin: center;
+}
+
+.confetti-particle:nth-child(7n) {
+  width: 7px;
+  height: 7px;
+  border-radius: 1px;
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+}
+
 @keyframes confettiFall {
   0% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
   70% { opacity: 1; }

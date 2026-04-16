@@ -54,34 +54,40 @@ export default function QuizCard({
   };
 
   return (
-    <div className="scene-enter px-4">
+    <div className="scene-enter px-4 flex flex-col justify-center min-h-[70vh]">
       <audio ref={wordAudioRef} src={wordAudioSrc} preload="metadata" />
 
-      {/* Progress dots */}
-      <div className="flex justify-center gap-1.5 mb-5">
+      {/* Progress dots — larger, more visible */}
+      <div className="flex justify-center gap-2 mb-6">
         {Array.from({ length: totalQuestions }, (_, i) => (
           <div
             key={i}
-            className="w-2 h-2 rounded-full transition-all duration-300"
+            className="rounded-full transition-all duration-300"
             style={{
+              width: i === questionNumber - 1 ? "12px" : "8px",
+              height: i === questionNumber - 1 ? "12px" : "8px",
               background: i < questionNumber
                 ? "oklch(0.78 0.17 75)"
                 : i === questionNumber - 1
                 ? "oklch(0.78 0.17 75)"
-                : "oklch(0.25 0.01 75)",
-              transform: i === questionNumber - 1 ? "scale(1.3)" : "scale(1)",
+                : "oklch(0.30 0.01 75)",
+              boxShadow: i === questionNumber - 1 ? "0 0 8px oklch(0.78 0.17 75 / 0.4)" : "none",
             }}
           />
         ))}
       </div>
 
-      {/* Question — story-based */}
+      {/* Question — visually distinct from options */}
       {question.storyQuestion ? (
         <div
-          className="rounded-2xl p-4 mb-5"
-          style={{ background: "oklch(0.17 0.01 75)", border: "1px solid oklch(0.24 0.012 75)" }}
+          className="rounded-2xl p-5 mb-6"
+          style={{
+            background: "oklch(0.20 0.015 75)",
+            border: "1px solid oklch(0.30 0.02 75)",
+          }}
         >
-          <p className="font-[var(--font-story)] text-base leading-relaxed" style={{ color: "oklch(0.92 0.005 75)" }}>
+          <p className="game-label mb-2" style={{ fontSize: "0.6rem" }}>Question</p>
+          <p className="font-[var(--font-story)] text-lg leading-relaxed" style={{ color: "oklch(0.95 0.005 75)" }}>
             {question.storyQuestion}
           </p>
         </div>
@@ -89,7 +95,7 @@ export default function QuizCard({
         <div
           className="mx-auto mb-6 p-5 rounded-2xl text-center max-w-[260px]"
           style={{
-            background: "oklch(0.17 0.01 75)",
+            background: "oklch(0.20 0.015 75)",
             border: "2px solid oklch(0.78 0.17 75 / 0.4)",
             boxShadow: "0 0 24px oklch(0.78 0.17 75 / 0.1)",
           }}
@@ -100,11 +106,9 @@ export default function QuizCard({
         </div>
       )}
 
-      {/* Options */}
-      <div className="space-y-2">
+      {/* Options — taller touch targets, more spacing */}
+      <div className="space-y-3">
         {question.options.map((option, i) => {
-          const base = "w-full text-left px-4 py-3 rounded-xl transition-all min-h-[48px] text-sm font-medium ";
-
           let style: React.CSSProperties;
           let extraClass = "";
 
@@ -117,7 +121,7 @@ export default function QuizCard({
           } else if (feedback === "correct" && i === question.correctIndex) {
             style = { background: "oklch(0.72 0.19 145 / 0.1)", border: "1px solid oklch(0.72 0.19 145 / 0.3)", color: "oklch(0.80 0.15 145)" };
           } else {
-            style = { background: "oklch(0.17 0.01 75)", border: "1px solid oklch(0.24 0.012 75)", color: "oklch(0.90 0.005 75)" };
+            style = { background: "oklch(0.15 0.008 75)", border: "1px solid oklch(0.24 0.012 75)", color: "oklch(0.90 0.005 75)" };
           }
 
           return (
@@ -125,7 +129,7 @@ export default function QuizCard({
               key={i}
               onClick={() => handleSelect(i)}
               disabled={selected !== null}
-              className={base + extraClass}
+              className={`w-full text-left px-5 py-4 rounded-xl transition-all min-h-[52px] text-sm font-medium ${extraClass}`}
               style={style}
             >
               {option}
@@ -136,7 +140,7 @@ export default function QuizCard({
 
       {/* Explanation + word audio on correct */}
       {showExplanation && question.explanation && (
-        <div className="mt-4 scene-enter">
+        <div className="mt-5 scene-enter">
           <div
             className="rounded-2xl p-4"
             style={{ background: "oklch(0.72 0.19 145 / 0.08)", border: "1px solid oklch(0.72 0.19 145 / 0.2)" }}

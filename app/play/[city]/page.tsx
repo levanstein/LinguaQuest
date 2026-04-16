@@ -189,12 +189,16 @@ export default function PlayPage() {
       <div className="flex-1 flex flex-col overflow-y-auto">
         {/* Arrival */}
         {scene === "SCENE_1_ARRIVAL" && (
-          <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
-            <SceneIllustration scene="SCENE_1_ARRIVAL" />
+          <div className="flex-1 flex flex-col items-center justify-center px-4 text-center relative">
+            {/* Atmospheric gradient behind illustration */}
+            <div className="absolute inset-0" style={{
+              background: "radial-gradient(ellipse 80% 50% at 50% 35%, oklch(0.20 0.04 75) 0%, transparent 70%)",
+            }} />
             <div className="relative z-10">
-              <h2 className="text-3xl font-bold text-amber mb-2 font-display">Istanbul</h2>
-              <p className="text-neutral-400 text-sm mb-4">The sun is low. You have until sunset.</p>
-              <p className="text-white text-base leading-relaxed mb-6 max-w-[320px] font-display">
+              <SceneIllustration scene="SCENE_1_ARRIVAL" />
+              <h2 className="text-3xl font-bold mb-2 font-display" style={{ color: "oklch(0.78 0.17 75)" }}>Istanbul</h2>
+              <p className="text-sm mb-4" style={{ color: "oklch(0.55 0.01 75)" }}>The sun is low. You have until sunset.</p>
+              <p className="text-base leading-relaxed mb-6 max-w-[320px] font-[var(--font-story)]" style={{ color: "oklch(0.90 0.005 75)" }}>
                 Find the hidden bookshop in Sultanahmet. Talk to the locals, learn their language, follow the clues.
               </p>
               <button
@@ -203,7 +207,7 @@ export default function PlayPage() {
                   handleTransition();
                 }}
                 className="px-8 py-4 rounded-xl text-sm font-bold uppercase tracking-widest transition-all min-h-[48px]"
-                style={{ background: "oklch(0.78 0.17 75)", color: "oklch(0.15 0.02 75)" }}
+                style={{ background: "oklch(0.78 0.17 75)", color: "oklch(0.15 0.02 75)", boxShadow: "0 4px 20px oklch(0.78 0.17 75 / 0.2)" }}
               >
                 Begin
               </button>

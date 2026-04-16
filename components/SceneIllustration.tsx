@@ -175,7 +175,7 @@ export default function SceneIllustration({ scene }: { scene: SceneId }) {
   if (!render) return null;
 
   return (
-    <div className="w-full h-[180px] overflow-hidden rounded-lg mb-4 opacity-80">
+    <div className="w-full h-[200px] overflow-hidden rounded-2xl mb-3" style={{ opacity: 0.9 }}>
       {render()}
     </div>
   );

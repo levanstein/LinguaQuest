@@ -19,7 +19,7 @@ export default function ProgressBar({
         {Array.from({ length: total }, (_, i) => (
           <div
             key={i}
-            className="h-1.5 flex-1 rounded-full transition-all duration-500"
+            className="h-2 flex-1 rounded-full transition-all duration-500"
             style={{
               background: i < current ? "oklch(0.78 0.17 75)" : "oklch(0.22 0.01 75)",
             }}

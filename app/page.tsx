@@ -42,7 +42,7 @@ export default function Home() {
       }} />
 
       {/* Skyline — slightly larger, more atmospheric */}
-      <div className="absolute bottom-[22%] left-0 right-0 h-[160px]" style={{ opacity: 0.15 }}>
+      <div className="absolute bottom-[10%] left-0 right-0 h-[160px]" style={{ opacity: 0.12 }}>
         <svg viewBox="0 0 480 160" className="w-full h-full" style={{ fill: "oklch(0.78 0.17 75)" }}>
           <path d="M180,160 L180,90 Q220,35 260,90 L260,160Z" />
           <rect x="165" y="55" width="6" height="105" />
@@ -138,7 +138,7 @@ export default function Home() {
             >
               Begin Your Quest
             </button>
-            <p className="text-center mt-4" style={{ color: "oklch(0.40 0.01 75)", fontSize: "0.7rem" }}>
+            <p className="text-center mt-4" style={{ color: "oklch(0.52 0.01 75)", fontSize: "0.7rem" }}>
               ~5 minutes · headphones recommended
             </p>
           </div>
