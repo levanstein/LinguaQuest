@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+@theme {
+  --color-dark: #0F0F0F;
+  --color-surface: #1A1A1A;
+  --color-border: #2A2A2A;
+  --color-amber: #F59E0B;
+  --color-amber-glow: rgba(245, 158, 11, 0.3);
+}
+
+html, body {
+  background: #0A0A0A;
+  color: #FAFAFA;
+  font-family: "Inter", system-ui, sans-serif;
+  min-height: 100dvh;
+}
+
+/* Turkish word highlight */
+.turkish-word {
+  color: var(--color-amber);
+  font-weight: 700;
+  text-shadow: 0 0 8px var(--color-amber-glow);
+  cursor: help;
+  position: relative;
+}
+
+.turkish-word .tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-style: italic;
+  color: #A3A3A3;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.turkish-word:hover .tooltip {
+  opacity: 1;
+}
+
+/* Scene transitions */
+.scene-enter {
+  animation: sceneEnter 0.5s ease-out;
+}
+
+@keyframes sceneEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.scene-fade-out {
+  animation: sceneFadeOut 0.5s ease-in forwards;
+}
+
+@keyframes sceneFadeOut {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Quiz feedback */
+.quiz-correct {
+  animation: correctFlash 0.4s ease-out;
+}
+
+@keyframes correctFlash {
+  0% { background: #22c55e; transform: scale(1.05); }
+  100% { background: transparent; transform: scale(1); }
+}
+
+.quiz-wrong {
+  animation: wrongShake 0.4s ease-out;
+}
+
+@keyframes wrongShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+/* Confetti */
+.confetti-particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: var(--color-amber);
+  border-radius: 50%;
+  animation: confettiFall 3s ease-out forwards;
+}
+
+@keyframes confettiFall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(400px) rotate(720deg);
+  }
+}
+
+/* Glow pulse for words */
+.glow-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { text-shadow: 0 0 8px var(--color-amber-glow); }
+  50% { text-shadow: 0 0 16px var(--color-amber-glow), 0 0 24px var(--color-amber-glow); }
+}
+
+/* Audio waveform */
+.waveform-bar {
+  animation: waveform 1.2s ease-in-out infinite;
+}
+
+@keyframes waveform {
+  0%, 100% { height: 4px; }
+  50% { height: 16px; }
+}
+
+/* NPC entrance */
+.npc-enter {
+  animation: npcSlideIn 0.3s ease-out;
+}
+
+@keyframes npcSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Vocab word stagger (used in finale) */
+.vocab-word-enter {
+  animation: vocabFadeIn 0.3s ease-out both;
+}
+
+@keyframes vocabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
